@@ -1003,7 +1003,8 @@ function MiniTest.gen_reporter.stdout(opts)
     -- Possibly quit
     --stylua: ignore
     if not opts.quit_on_finish then return end
-    vim.cmd(H.has_fails(all_cases) and 'silent! 1cquit!' or 'silent! 0cquit!')
+    local command = string.format('silent! %scquit', H.has_fails(all_cases) and 1 or 0)
+    vim.cmd(command)
   end
 
   return res
@@ -1112,8 +1113,15 @@ function MiniTest.new_child_neovim()
     --stylua: ignore
     if not child.is_running() then return end
 
-    -- -- Try to properly exit Neovim. `pcall` avoids `channel closed by client` error.
-    -- pcall(child.cmd, 'silent! 0cquit!')
+    -- It is important to close these because there is an upper limit on how
+    -- many resources `vim.loop` (libuv) can have. If not, this will result
+    -- into "connection refused" errors while trying to connect.
+    child.job.stdin:close()
+    child.job.stdout:close()
+    child.job.stderr:close()
+
+    -- Properly exit Neovim. `pcall` avoids `channel closed by client` error.
+    pcall(child.cmd, 'silent! 0cquit')
 
     pcall(vim.fn.chanclose, child.job.channel)
 
@@ -1122,12 +1130,6 @@ function MiniTest.new_child_neovim()
     pcall(vim.fn.delete, child.job.address)
 
     child.job.handle:kill(9)
-    -- It is important to close these because there is an upper limit on how
-    -- many resources `vim.loop` (libuv) can have. If not, this will result
-    -- into "connection refused" errors while trying to connect.
-    child.job.stdin:close()
-    child.job.stdout:close()
-    child.job.stderr:close()
     child.job = nil
   end
 
