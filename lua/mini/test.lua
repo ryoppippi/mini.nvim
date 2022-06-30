@@ -1112,8 +1112,8 @@ function MiniTest.new_child_neovim()
     --stylua: ignore
     if not child.is_running() then return end
 
-    -- Try to properly exit Neovim. `pcall` avoids `channel closed by client` error.
-    pcall(child.cmd, 'silent! 0cquit!')
+    -- -- Try to properly exit Neovim. `pcall` avoids `channel closed by client` error.
+    -- pcall(child.cmd, 'silent! 0cquit!')
 
     pcall(vim.fn.chanclose, child.job.channel)
 
