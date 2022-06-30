@@ -25,4 +25,5 @@ jobs:
           neovim: true
           version: ${{ matrix.neovim_version }}
       - name: Run tests
-        run: make test
+        # run: make test
+        run: FILE=tests/test_pairs.lua GROUP_DEPTH=100 make test_file
