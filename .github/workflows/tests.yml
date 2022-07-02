@@ -5,11 +5,25 @@ on: [push, pull_request]
 jobs:
   build:
     name: Run tests
-    runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       matrix:
-        neovim_version: ['v0.5.1', 'v0.6.1', 'v0.7.0', 'nightly']
+        include:
+          - os: ubuntu-latest
+            neovim_version: 'v0.5.1'
+          - os: ubuntu-latest
+            neovim_version: 'v0.6.1'
+          - os: ubuntu-latest
+            neovim_version: 'v0.7.2'
+          - os: ubuntu-latest
+            neovim_version: 'nightly'
+          - os: windows-latest
+            neovim_version: 'v0.7.2'
+          - os: windows-latest
+            neovim_version: 'nightly'
+          - os: macos-latest
+            neovim_version: 'nightly'
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
