@@ -48,6 +48,16 @@ There are following change types:
 
 - Allow `source.preview` to directly set another buffer into picker's main window. The recommended way is still to adjust the provided `buf_id` buffer, but there is now a workaround if this is not reasonably possible.
 
+## mini.test
+
+### Refine
+
+- Update `expect.error` and `expect.no_error` to not accept extra arguments for tested function. It will work until the next 'mini.nvim' release, but not after that.
+
+    Use them explicitly inside anonymous function: `expect.error(f, "", 1, 2)` -> `expect.error(function() f(1, 2) end, "")` and `expect.no_error(f, 1, 2)` -> `expect.no_error(function() f(1, 2) end)`.
+
+    Sorry for the inconvenience.
+
 
 # Version 0.17.0
 
