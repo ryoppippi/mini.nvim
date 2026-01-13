@@ -52,11 +52,15 @@ There are following change types:
 
 ### Refine
 
-- Update `expect.error` and `expect.no_error` to not accept extra arguments for tested function. It will work until the next 'mini.nvim' release, but not after that.
+- Update `expect.error` and `expect.no_error` to not accept extra arguments for tested function. It will mostly work until the next 'mini.nvim' release, but not after that.
 
     Use them explicitly inside anonymous function: `expect.error(f, "", 1, 2)` -> `expect.error(function() f(1, 2) end, "")` and `expect.no_error(f, 1, 2)` -> `expect.no_error(function() f(1, 2) end)`.
 
     Sorry for the inconvenience.
+
+### Expand
+
+- Update all `MiniTest.expect` expectations to allow customization of failure reason instead of default "Failed expectation for ...". This also consistently introduces `opts` last argument.
 
 
 # Version 0.17.0

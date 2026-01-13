@@ -141,7 +141,6 @@ T['setup()']['validates `config` argument'] = function()
   unload_module()
 
   local expect_config_error = function(config, name, target_type)
-    local pattern = vim.pesc(name) .. '.*' .. vim.pesc(target_type)
     expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
@@ -704,6 +703,19 @@ end
 
 T['expect'] = new_set()
 
+local validate_fail_reason = function(expectation, reason, args)
+  table.insert(args, { fail_reason = reason })
+  local ok, err = pcall(expectation, unpack(args))
+
+  -- Should error with specific pattern
+  eq(ok, false)
+  if vim.is_callable(reason) then reason = reason() end
+  expect.match(err, vim.pesc(reason))
+
+  -- Should not show default "Failed expectation ..." text
+  expect.no_match(err, 'Failed expectation')
+end
+
 T['expect']['equality()/no_equality()'] = new_set()
 
 T['expect']['equality()/no_equality()']['work when equal'] = function()
@@ -752,18 +764,26 @@ T['expect']['equality()/no_equality()']['return `true` on success'] = function()
   eq(MiniTest.expect.no_equality(1, 2), true)
 end
 
+T['expect']['equality()/no_equality()']['respect `opts.fail_reason`'] = function()
+  validate_fail_reason(MiniTest.expect.equality, 'This is test 1', { 1, 2 })
+  validate_fail_reason(MiniTest.expect.equality, function() return 'This is test 2' end, { 2, 3 })
+
+  validate_fail_reason(MiniTest.expect.no_equality, 'This is test 3', { 1, 1 })
+  validate_fail_reason(MiniTest.expect.no_equality, function() return 'This is test 4' end, { 2, 2 })
+end
+
 T['expect']['error()'] = new_set()
 
 T['expect']['error()']['works'] = function()
   expect.error(function()
     MiniTest.expect.error(function() end)
-  end, 'error%..*Observed no error')
+  end, 'error.*Observed no error')
 
   expect.error(function()
     MiniTest.expect.error(function() end, 'aa')
-  end, 'error matching pattern "aa"%..*Observed no error')
+  end, 'error matching pattern "aa".*Observed no error')
 
-  expect.error(function() MiniTest.expect.error(error, 'bb') end, 'error matching pattern "bb"%..*Observed error:')
+  expect.error(function() MiniTest.expect.error(error, 'bb') end, 'error matching pattern "bb".*Observed error:')
 end
 
 T['expect']['error()']['respects `pattern` argument'] = function()
@@ -800,10 +820,20 @@ end
 
 T['expect']['error()']['returns `true` on success'] = function() eq(MiniTest.expect.error(error), true) end
 
+T['expect']['error()']['respects `opts.fail_reason`'] = function()
+  local f = function() return 1 end
+  validate_fail_reason(MiniTest.expect.error, 'This is test 1', { f, '' })
+  validate_fail_reason(MiniTest.expect.error, function() return 'This is test 2' end, { f, '' })
+
+  local g = function() error('xxx') end
+  validate_fail_reason(MiniTest.expect.error, 'This is test 3', { g, 'yyy' })
+  validate_fail_reason(MiniTest.expect.error, function() return 'This is test 4' end, { g, 'yyy' })
+end
+
 T['expect']['no_error()'] = new_set()
 
 T['expect']['no_error()']['works'] = function()
-  expect.error(function() MiniTest.expect.no_error(error) end, '%*no%* error%..*Observed error:')
+  expect.error(function() MiniTest.expect.no_error(error) end, '%*no%* error.*Observed error:')
 
   expect.no_error(function()
     MiniTest.expect.no_error(function() end)
@@ -835,6 +865,12 @@ end
 
 T['expect']['no_error()']['returns `true` on success'] = function()
   eq(MiniTest.expect.no_error(function() end), true)
+end
+
+T['expect']['no_error()']['respects `opts.fail_reason`'] = function()
+  local f = function() error('Error msg') end
+  validate_fail_reason(MiniTest.expect.no_error, 'This is test 1', { f })
+  validate_fail_reason(MiniTest.expect.no_error, function() return 'This is test 2' end, { f })
 end
 
 T['expect']['reference_screenshot()'] = new_set()
@@ -1081,6 +1117,15 @@ T['expect']['reference_screenshot()']['respects `opts.directory`'] = function()
   eq(MiniTest.expect.reference_screenshot(child.get_screenshot(), nil, { directory = 'tests/dir-test/' }), true)
 end
 
+T['expect']['reference_screenshot()']['respects `opts.fail_reason`'] = function()
+  local path = get_ref_path('reference-screenshot')
+  child.set_size(5, 12)
+  set_lines({ 'bbb' })
+  local screen = child.get_screenshot()
+  validate_fail_reason(MiniTest.expect.reference_screenshot, 'This is test 1', { screen, path })
+  validate_fail_reason(MiniTest.expect.reference_screenshot, function() return 'This is test 2' end, { screen, path })
+end
+
 T['expect']['reference_screenshot()']['works with multibyte characters'] = function()
   child.set_size(5, 12)
   set_lines({ '  1  2' })
@@ -1096,7 +1141,7 @@ T['new_expectation()']['works'] = function()
     function(x) return 'Object: ' .. vim.inspect(x) end
   )
 
-  expect.error(function() expect_truthy(false) end, 'truthy%..*Object:')
+  expect.error(function() expect_truthy(false) end, 'truthy.*Object:')
   expect.no_error(function() expect_truthy(1) end)
 end
 
@@ -1107,7 +1152,7 @@ T['new_expectation()']['allows string or function arguments'] = function()
     'Not truthy'
   )
 
-  expect.error(function() expect_truthy(false) end, 'func_truthy%..*Not truthy')
+  expect.error(function() expect_truthy(false) end, 'func_truthy.*Not truthy')
   expect.no_error(function() expect_truthy(1) end)
 end
 
