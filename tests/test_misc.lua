@@ -61,7 +61,7 @@ T['setup()']['validates `config` argument'] = function()
   unload_module()
 
   local expect_config_error = function(config, name, target_type)
-    expect.error(load_module, vim.pesc(name) .. '.*' .. vim.pesc(target_type), config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   expect_config_error('a', 'config', 'table')
@@ -921,8 +921,8 @@ end
 T['setup_restore_cursor()']['validates input'] = function()
   local setup_restore_cursor = function(...) child.lua('MiniMisc.setup_restore_cursor(...)', { ... }) end
 
-  expect.error(setup_restore_cursor, '`opts.center`.*boolean', { center = 1 })
-  expect.error(setup_restore_cursor, '`opts.ignore_filetype`.*array', { ignore_filetype = 1 })
+  expect.error(function() setup_restore_cursor({ center = 1 }) end, '`opts.center`.*boolean')
+  expect.error(function() setup_restore_cursor({ ignore_filetype = 1 }) end, '`opts.ignore_filetype`.*array')
 end
 
 T['setup_restore_cursor()']['respects `opts.center`'] = function()
@@ -1023,9 +1023,9 @@ T['stat_summary()']['works'] = function()
 end
 
 T['stat_summary()']['validates input'] = function()
-  expect.error(stat_summary, 'array', 'a')
-  expect.error(stat_summary, 'array', { a = 1 })
-  expect.error(stat_summary, 'numbers', { 'a' })
+  expect.error(function() stat_summary('a') end, 'array')
+  expect.error(function() stat_summary({ a = 1 }) end, 'array')
+  expect.error(function() stat_summary({ 'a' }) end, 'numbers')
 end
 
 T['stat_summary()']['works with one number'] = function()

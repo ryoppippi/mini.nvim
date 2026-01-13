@@ -125,7 +125,7 @@ T['setup()']['validates `config` argument'] = function()
   unload_module()
 
   local expect_config_error = function(config, name, target_type)
-    expect.error(load_module, vim.pesc(name) .. '.*' .. vim.pesc(target_type), config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   expect_config_error('a', 'config', 'table')
@@ -279,7 +279,7 @@ T['align_strings()']['respects `steps.pre_split` argument'] = function()
   -- Should validate that step correctly modified in place
   step_str = [[MiniAlign.new_step('tmp', function(strings) strings[1] = 1 end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { pre_split = { %s } })]], step_str)
-  expect.error(child.lua, 'Step `tmp` of `pre_split` should preserve structure of `strings`.', cmd)
+  expect.error(function() child.lua(cmd) end, 'Step `tmp` of `pre_split` should preserve structure of `strings`.')
 
   -- Uses `MiniAlign.config.steps` as default
   set_config_steps({ pre_split = [[{ MiniAlign.new_step('tmp', function(strings) strings[1] = 'a=b' end) }]] })
@@ -314,7 +314,7 @@ T['align_strings()']['respects `steps.split` argument'] = function()
   -- Should validate that step's output is convertible to parts
   step_str = [[MiniAlign.new_step('tmp', function(strings) return { { 'a', 1 }, {'aa', 'b'} } end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { split = %s })]], step_str)
-  expect.error(child.lua, 'convertible to parts', cmd)
+  expect.error(function() child.lua(cmd) end, 'convertible to parts')
 
   -- Is called with `opts`
   step_str = [[MiniAlign.new_step('tmp', function(strings, opts) return MiniAlign.as_parts(opts.tmp) end)]]
@@ -426,7 +426,7 @@ T['align_strings()']['respects `steps.merge` argument'] = function()
   -- Should validate that output is an array of strings
   step_str = [[MiniAlign.new_step('tmp', function(parts) return { 'a', 1 } end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { merge = %s })]], step_str)
-  expect.error(child.lua, vim.pesc('Output of `merge` step should be array of strings.'), cmd)
+  expect.error(function() child.lua(cmd) end, vim.pesc('Output of `merge` step should be array of strings.'))
 
   -- Is called with `opts`
   step_str = [[MiniAlign.new_step('tmp', function(parts, opts) return { opts.tmp } end)]]
@@ -1386,7 +1386,7 @@ T['Align']['validates steps after each modifier'] = function()
   set_lines({ 'a_b', 'aa_b' })
   set_cursor(1, 0)
   type_keys('Vj', 'ga')
-  expect.error(type_keys, 'pre_split.*array of steps', { 'e', '_' })
+  expect.error(function() type_keys('e', '_') end, 'pre_split.*array of steps')
 end
 
 T['Align']['prompts helper message after one idle second'] = new_set({

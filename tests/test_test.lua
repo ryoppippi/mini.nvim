@@ -142,7 +142,7 @@ T['setup()']['validates `config` argument'] = function()
 
   local expect_config_error = function(config, name, target_type)
     local pattern = vim.pesc(name) .. '.*' .. vim.pesc(target_type)
-    expect.error(load_module, pattern, config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   expect_config_error('a', 'config', 'table')
@@ -710,8 +710,8 @@ T['expect']['equality()/no_equality()']['work when equal'] = function()
   local f, empty_tbl = function() end, {}
 
   local validate = function(x, y)
-    expect.no_error(MiniTest.expect.equality, x, y)
-    expect.error(MiniTest.expect.no_equality, '%*no%* equality.*Object:', x, y)
+    expect.no_error(function() MiniTest.expect.equality(x, y) end)
+    expect.error(function() MiniTest.expect.no_equality(x, y) end, '%*no%* equality.*Object:')
   end
 
   validate(1, 1)
@@ -729,8 +729,8 @@ end
 T['expect']['equality()/no_equality()']['work when not equal'] = function()
   local f = function() end
   local validate = function(x, y)
-    expect.error(MiniTest.expect.equality, 'equality.*Left:  .*Right: ', x, y)
-    expect.no_error(MiniTest.expect.no_equality, x, y)
+    expect.error(function() MiniTest.expect.equality(x, y) end, 'equality.*Left:  .*Right: ')
+    expect.no_error(function() MiniTest.expect.no_equality(x, y) end)
   end
 
   validate(1, 2)
@@ -1070,8 +1070,8 @@ T['new_expectation()']['works'] = function()
     function(x) return 'Object: ' .. vim.inspect(x) end
   )
 
-  expect.error(expect_truthy, 'truthy%..*Object:', false)
-  expect.no_error(expect_truthy, 1)
+  expect.error(function() expect_truthy(false) end, 'truthy%..*Object:')
+  expect.no_error(function() expect_truthy(1) end)
 end
 
 T['new_expectation()']['allows string or function arguments'] = function()
@@ -1081,8 +1081,8 @@ T['new_expectation()']['allows string or function arguments'] = function()
     'Not truthy'
   )
 
-  expect.error(expect_truthy, 'func_truthy%..*Not truthy', false)
-  expect.no_error(expect_truthy, 1)
+  expect.error(function() expect_truthy(false) end, 'func_truthy%..*Not truthy')
+  expect.no_error(function() expect_truthy(1) end)
 end
 
 T['new_child_neovim()'] = new_set()
@@ -1264,12 +1264,12 @@ end
 T['child']['type_keys()']['validates input'] = function()
   local pattern = 'type_keys.*string'
 
-  expect.error(child.type_keys, pattern, 'a', 1)
-  expect.error(child.type_keys, pattern, 'a', { 'a', 1 })
+  expect.error(function() child.type_keys('a', 1) end, pattern)
+  expect.error(function() child.type_keys('a', { 'a', 1 }) end, pattern)
 end
 
 T['child']['type_keys()']['throws error explicitly'] = function()
-  expect.error(child.type_keys, 'E492: Not an editor command: aaa', ':aaa<CR>')
+  expect.error(function() child.type_keys(':aaa<CR>') end, 'E492: Not an editor command: aaa')
 end
 
 T['child']['type_keys()']['respects `wait` argument'] = function()
@@ -1555,8 +1555,8 @@ T['gen_reporter']['buffer'] = new_set({
     child.expect_screenshot()
 
     -- Should be able to run several times
-    expect.no_error(child.lua, execute_command)
-    expect.no_error(child.lua, execute_command)
+    expect.no_error(function() child.lua(execute_command) end)
+    expect.no_error(function() child.lua(execute_command) end)
 
     -- Should use properly named buffer
     eq(child.api.nvim_buf_get_name(0), 'minitest://' .. child.api.nvim_get_current_buf() .. '/buffer-reporter')

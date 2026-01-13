@@ -194,7 +194,7 @@ T['setup()']['validates `config` argument'] = function()
   unload_module()
 
   local expect_config_error = function(config, name, target_type)
-    expect.error(load_module, vim.pesc(name) .. '.*' .. vim.pesc(target_type), config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   local expect_all_encode_symbols_check = function()
@@ -257,8 +257,8 @@ T['encode_strings()'] = new_set()
 T['encode_strings()']['works'] = function() eq(encode_strings({ 'aa', 'aa', 'aa' }), { '█' }) end
 
 T['encode_strings()']['validates `strings` argument'] = function()
-  expect.error(encode_strings, 'array', 'a')
-  expect.error(encode_strings, 'strings', { 1, 'a' })
+  expect.error(function() encode_strings('a') end, 'array')
+  expect.error(function() encode_strings({ 1, 'a' }) end, 'strings')
 end
 
 T['encode_strings()']['respects `strings` argument'] = function() eq(encode_strings({ 'aa' }), { '🬂' }) end

@@ -99,7 +99,7 @@ end
 T['setup()']['validates `config` argument'] = function()
   unload_module()
   local expect_config_error = function(config, name, target_type)
-    expect.error(load_module, vim.pesc(name) .. '.*' .. vim.pesc(target_type), config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   expect_config_error('a', 'config', 'table')
@@ -332,14 +332,14 @@ T['default_sort_func()']['respects `opts.split_patterns`'] = function()
 end
 
 T['default_sort_func()']['validates arguments'] = function()
-  expect.error(default_sort_func, '`content`', 1)
-  expect.error(default_sort_func, '`content`', {})
-  expect.error(default_sort_func, '`content`', { submode = 'v' })
-  expect.error(default_sort_func, '`content`', { lines = { 'a' } })
+  expect.error(function() default_sort_func(1) end, '`content`')
+  expect.error(function() default_sort_func({}) end, '`content`')
+  expect.error(function() default_sort_func({ submode = 'v' }) end, '`content`')
+  expect.error(function() default_sort_func({ lines = { 'a' } }) end, '`content`')
 
   local content = { lines = { 'a', 'b' }, submode = 'V' }
-  expect.error(default_sort_func, '`opts.compare_fun`', content, { compare_fun = 1 })
-  expect.error(default_sort_func, '`opts.split_patterns`', content, { split_patterns = 1 })
+  expect.error(function() default_sort_func(content, { compare_fun = 1 }) end, '`opts.compare_fun`')
+  expect.error(function() default_sort_func(content, { split_patterns = 1 }) end, '`opts.split_patterns`')
 end
 
 T['default_evaluate_func()'] = new_set()
@@ -410,10 +410,10 @@ T['default_evaluate_func()']['does not modify input'] = function()
 end
 
 T['default_evaluate_func()']['validates arguments'] = function()
-  expect.error(default_evaluate_func, '`content`', 1)
-  expect.error(default_evaluate_func, '`content`', {})
-  expect.error(default_evaluate_func, '`content`', { submode = 'v' })
-  expect.error(default_evaluate_func, '`content`', { lines = { 'a' } })
+  expect.error(function() default_evaluate_func(1) end, '`content`')
+  expect.error(function() default_evaluate_func({}) end, '`content`')
+  expect.error(function() default_evaluate_func({ submode = 'v' }) end, '`content`')
+  expect.error(function() default_evaluate_func({ lines = { 'a' } }) end, '`content`')
 end
 
 -- Integration tests ==========================================================

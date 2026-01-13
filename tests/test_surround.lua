@@ -139,7 +139,7 @@ T['setup()']['validates `config` argument'] = function()
   unload_module()
 
   local expect_config_error = function(config, name, target_type)
-    expect.error(load_module, vim.pesc(name) .. '.*' .. vim.pesc(target_type), config)
+    expect.error(function() load_module(config) end, vim.pesc(name) .. '.*' .. vim.pesc(target_type))
   end
 
   expect_config_error('a', 'config', 'table')
@@ -2501,7 +2501,7 @@ T['Custom surrounding']['validates captures in extract pattern'] = function()
   local validate = function(line, col, key)
     set_lines({ line })
     set_cursor(1, col)
-    expect.error(type_keys, 'two or four empty captures', 'sd', key)
+    expect.error(function() type_keys('sd', key) end, 'two or four empty captures')
 
     -- Clear command line to error accumulation and hit-enter-prompt
     type_keys(':<Esc>')
