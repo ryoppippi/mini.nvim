@@ -58,6 +58,8 @@ There are following change types:
 
     Sorry for the inconvenience.
 
+- Update all built-in reporters (`gen_reporter.buffer` and `gen_reporter.stdout`) to first show all fails followed by all notes. This makes it easier to find failed cases when there are many notes (like from `MiniTest.skip()`).
+
 ### Expand
 
 - Update all `MiniTest.expect` expectations to allow customization of failure reason instead of default "Failed expectation for ...". This also consistently introduces `opts` last argument.

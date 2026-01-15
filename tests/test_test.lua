@@ -1638,7 +1638,7 @@ T['gen_reporter']['stdout'] = new_set({
     child.fn.termopen(command)
     -- Wait until check is done and possible process is ended
     vim.loop.sleep(terminal_wait)
-    local ignore_attr = child.fn.has('nvim-0.11') == 1 and {} or { 31, 32, 34, 35 }
+    local ignore_attr = child.fn.has('nvim-0.11') == 1 and {} or { 31, 32, 33, 34, 35 }
     child.expect_screenshot({ ignore_attr = ignore_attr })
   end,
 })
