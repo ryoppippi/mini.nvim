@@ -1030,32 +1030,6 @@ T['expect']['reference_screenshot()']['respects `opts.force` argument'] = functi
   eq(MiniTest.current.case.exec.notes, notes)
 end
 
-T['expect']['reference_screenshot()']['respects `opts.ignore_lines`'] = function()
-  -- Do not show soft deprecation message
-  local notify_orig = vim.notify
-  vim.notify = function() end
-  MiniTest.finally(function() vim.notify = notify_orig end)
-
-  local path = get_ref_path('reference-screenshot')
-  child.set_size(5, 12)
-  local validate = function(ignore_lines, ref)
-    eq(MiniTest.expect.reference_screenshot(child.get_screenshot(), path, { ignore_lines = ignore_lines }), ref)
-  end
-
-  set_lines({ 'aaa' })
-  validate(nil, true)
-
-  set_lines({ 'aaa', 'bbb' })
-  validate({ 2 }, true)
-  validate({ 1, 2, 3 }, true)
-
-  set_lines({ 'ccc', 'bbb' })
-  expect.error(
-    function() MiniTest.expect.reference_screenshot(child.get_screenshot(), path, { ignore_lines = { 2 } }) end,
-    'screenshot equality to reference at ' .. vim.pesc(vim.inspect(path)) .. '.*Reference:.*Observed:'
-  )
-end
-
 T['expect']['reference_screenshot()']['respects `opts.ignore_text`'] = function()
   local path = get_ref_path('reference-screenshot')
   child.set_size(5, 12)
