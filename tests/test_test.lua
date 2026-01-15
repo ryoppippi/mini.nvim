@@ -1013,29 +1013,29 @@ T['expect']['reference_screenshot()']['locates problem'] = function()
   -- Number of lines
   local screen_text_lines = vim.deepcopy(screen)
   table.remove(screen_text_lines.text, 1)
-  validate(screen_text_lines, 'Different number of `text` lines%. Reference: 5%. Observed: 4%.')
+  validate(screen_text_lines, 'different number of `text` lines%, reference = 5, observed = 4')
 
   local screen_attr_lines = vim.deepcopy(screen)
   table.remove(screen_attr_lines.attr, 1)
-  validate(screen_attr_lines, 'Different number of `attr` lines%. Reference: 5%. Observed: 4%.')
+  validate(screen_attr_lines, 'different number of `attr` lines, reference = 5, observed = 4')
 
   -- Number of columns
   local screen_text_columns = vim.deepcopy(screen)
   table.remove(screen_text_columns.text[1], 1)
-  validate(screen_text_columns, 'Different number of columns in `text` line 1%. Reference: 12%. Observed: 11%.')
+  validate(screen_text_columns, 'different number of columns in `text` line 1%, reference = 12, observed = 11')
 
   local screen_attr_columns = vim.deepcopy(screen)
   table.remove(screen_attr_columns.attr[1], 1)
-  validate(screen_attr_columns, 'Different number of columns in `attr` line 1%. Reference: 12%. Observed: 11%.')
+  validate(screen_attr_columns, 'different number of columns in `attr` line 1%, reference = 12, observed = 11')
 
   -- Cells
   local screen_text_cell = vim.deepcopy(screen)
   screen_text_cell.text[1][2] = 'X'
-  validate(screen_text_cell, 'Different `text` cell at line 1 column 2%. Reference: "a"%. Observed: "X"%.')
+  validate(screen_text_cell, 'different `text` cell at line 1 column 2, reference = "a", observed = "X"')
 
   local screen_attr_cell = vim.deepcopy(screen)
   screen_attr_cell.attr[1][2] = 'X'
-  validate(screen_attr_cell, 'Different `attr` cell at line 1 column 2%. Reference: "0"%. Observed: "X"%.')
+  validate(screen_attr_cell, 'different `attr` cell at line 1 column 2, reference = "0", observed = "X"')
 end
 
 T['expect']['reference_screenshot()']['correctly infers reference path'] = function()
@@ -1162,7 +1162,7 @@ T['expect']['reference_screenshot()']['respects `opts.ignore_text`'] = function(
     function() MiniTest.expect.reference_screenshot(child.get_screenshot(), path, { ignore_text = { 2 } }) end,
     'screenshot equality to reference at '
       .. vim.pesc(vim.inspect(path))
-      .. '.*Different `text` cell at line 1 column 1%. Reference: "a"%. Observed: "c"%.'
+      .. '.*different `text` cell at line 1 column 1, reference = "a", observed = "c"'
   )
 end
 
@@ -1188,7 +1188,7 @@ T['expect']['reference_screenshot()']['respects `opts.ignore_attr`'] = function(
     function() MiniTest.expect.reference_screenshot(child.get_screenshot(), path, { ignore_text = { 2 } }) end,
     'screenshot equality to reference at '
       .. vim.pesc(vim.inspect(path))
-      .. '.*Different `attr` cell at line 1 column 2%. Reference: "0"%. Observed: "1"%.'
+      .. '.*different `attr` cell at line 1 column 2, reference = "0", observed = "1"'
   )
 end
 
