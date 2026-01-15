@@ -716,58 +716,88 @@ local validate_fail_reason = function(expectation, reason, args)
   expect.no_match(err, 'Failed expectation')
 end
 
-T['expect']['equality()/no_equality()'] = new_set()
+T['expect']['equality()'] = new_set()
 
-T['expect']['equality()/no_equality()']['work when equal'] = function()
+T['expect']['equality()']['works'] = function()
   local f, empty_tbl = function() end, {}
 
-  local validate = function(x, y)
-    expect.no_error(function() MiniTest.expect.equality(x, y) end)
+  -- Pass
+  local validate_pass = function(x, y) eq(MiniTest.expect.equality(x, y), true) end
+
+  validate_pass(1, 1)
+  validate_pass('a', 'a')
+  validate_pass(f, f)
+  validate_pass(empty_tbl, empty_tbl)
+
+  -- - Tables should be compared "deeply per elements"
+  validate_pass(empty_tbl, {})
+  validate_pass({ 1 }, { 1 })
+  validate_pass({ a = 1 }, { a = 1 })
+  validate_pass({ { b = 2 } }, { { b = 2 } })
+
+  -- Fail
+  local validate_fail = function(x, y)
+    expect.error(function() MiniTest.expect.equality(x, y) end, 'equality.*Left:  .*Right: ')
+  end
+
+  validate_fail(1, 2)
+  validate_fail(1, '1')
+  validate_fail('a', 'b')
+  validate_fail(f, function() end)
+
+  -- - Tables should be compared "deeply per elements"
+  validate_fail({ 1 }, { 2 })
+  validate_fail({ a = 1 }, { a = 2 })
+  validate_fail({ a = 1 }, { b = 1 })
+  validate_fail({ a = 1 }, { { a = 1 } })
+  validate_fail({ { b = 2 } }, { { b = 3 } })
+  validate_fail({ { b = 2 } }, { { c = 2 } })
+end
+
+T['expect']['equality()']['respects `opts.fail_reason`'] = function()
+  validate_fail_reason(MiniTest.expect.equality, 'This is test 1', { 1, 2 })
+  validate_fail_reason(MiniTest.expect.equality, function() return 'This is test 2' end, { 2, 3 })
+end
+
+T['expect']['no_equality()'] = new_set()
+
+T['expect']['no_equality()']['works'] = function()
+  local f, empty_tbl = function() end, {}
+
+  -- Pass
+  local validate_pass = function(x, y) eq(MiniTest.expect.no_equality(x, y), true) end
+
+  validate_pass(1, 2)
+  validate_pass(1, '1')
+  validate_pass('a', 'b')
+  validate_pass(f, function() end)
+
+  -- - Tables should be compared "deeply per elements"
+  validate_pass({ 1 }, { 2 })
+  validate_pass({ a = 1 }, { a = 2 })
+  validate_pass({ a = 1 }, { b = 1 })
+  validate_pass({ a = 1 }, { { a = 1 } })
+  validate_pass({ { b = 2 } }, { { b = 3 } })
+  validate_pass({ { b = 2 } }, { { c = 2 } })
+
+  -- Fail
+  local validate_fail = function(x, y)
     expect.error(function() MiniTest.expect.no_equality(x, y) end, '%*no%* equality.*Object:')
   end
 
-  validate(1, 1)
-  validate('a', 'a')
-  validate(f, f)
-  validate(empty_tbl, empty_tbl)
+  validate_fail(1, 1)
+  validate_fail('a', 'a')
+  validate_fail(f, f)
+  validate_fail(empty_tbl, empty_tbl)
 
-  -- Tables should be compared "deeply per elements"
-  validate(empty_tbl, {})
-  validate({ 1 }, { 1 })
-  validate({ a = 1 }, { a = 1 })
-  validate({ { b = 2 } }, { { b = 2 } })
+  -- - Tables should be compared "deeply per elements"
+  validate_fail(empty_tbl, {})
+  validate_fail({ 1 }, { 1 })
+  validate_fail({ a = 1 }, { a = 1 })
+  validate_fail({ { b = 2 } }, { { b = 2 } })
 end
 
-T['expect']['equality()/no_equality()']['work when not equal'] = function()
-  local f = function() end
-  local validate = function(x, y)
-    expect.error(function() MiniTest.expect.equality(x, y) end, 'equality.*Left:  .*Right: ')
-    expect.no_error(function() MiniTest.expect.no_equality(x, y) end)
-  end
-
-  validate(1, 2)
-  validate(1, '1')
-  validate('a', 'b')
-  validate(f, function() end)
-
-  -- Tables should be compared "deeply per elements"
-  validate({ 1 }, { 2 })
-  validate({ a = 1 }, { a = 2 })
-  validate({ a = 1 }, { b = 1 })
-  validate({ a = 1 }, { { a = 1 } })
-  validate({ { b = 2 } }, { { b = 3 } })
-  validate({ { b = 2 } }, { { c = 2 } })
-end
-
-T['expect']['equality()/no_equality()']['return `true` on success'] = function()
-  eq(MiniTest.expect.equality(1, 1), true)
-  eq(MiniTest.expect.no_equality(1, 2), true)
-end
-
-T['expect']['equality()/no_equality()']['respect `opts.fail_reason`'] = function()
-  validate_fail_reason(MiniTest.expect.equality, 'This is test 1', { 1, 2 })
-  validate_fail_reason(MiniTest.expect.equality, function() return 'This is test 2' end, { 2, 3 })
-
+T['expect']['no_equality()']['respects `opts.fail_reason`'] = function()
   validate_fail_reason(MiniTest.expect.no_equality, 'This is test 3', { 1, 1 })
   validate_fail_reason(MiniTest.expect.no_equality, function() return 'This is test 4' end, { 2, 2 })
 end
