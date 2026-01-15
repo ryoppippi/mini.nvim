@@ -64,6 +64,8 @@ There are following change types:
 
 - Update all `MiniTest.expect` expectations to allow customization of failure reason instead of default "Failed expectation for ...". This also consistently introduces `opts` last argument.
 
+- Update `MiniTest.expect.equality` to show more detailed cause of failed equality. Like which character is different in two string or which values are different in two tables and at what key branch.
+
 
 # Version 0.17.0
 

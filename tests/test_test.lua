@@ -754,6 +754,84 @@ T['expect']['equality()']['works'] = function()
   validate_fail({ { b = 2 } }, { { c = 2 } })
 end
 
+T['expect']['equality()']['provides proper cause'] = function()
+  local validate = function(a, b, cause)
+    expect.error(function() MiniTest.expect.equality(a, b) end, 'Cause: ' .. vim.pesc(cause) .. '\n')
+  end
+
+  -- Different types
+  validate({ 1 }, 1, 'different types')
+  validate({ 1 }, 'a', 'different types')
+  validate(1, nil, 'different types')
+  validate(nil, 1, 'different types')
+
+  -- Strings
+  validate('a', 'bc', 'different string length')
+  validate('a', 'ab', 'different string length')
+  validate('ab', 'abc', 'different string length')
+  validate('', 'a', 'different string length')
+
+  validate('a', 'b', 'different character at position 1, left = "a", right = "b"')
+  validate('aa', 'ab', 'different character at position 2, left = "a", right = "b"')
+  validate('aac', 'abc', 'different character at position 2, left = "a", right = "b"')
+  validate('aa', 'bb', 'different character at position 1, left = "a", right = "b"')
+  validate('aaaa', 'abba', 'different character at position 2, left = "a", right = "b"')
+
+  -- Tables
+  validate({ 1 }, {}, 'different values at key 1, left = 1, right = nil')
+  validate({}, { 1 }, 'different values at key 1, left = nil, right = 1')
+  validate({ a = 1 }, {}, 'different values at key "a", left = 1, right = nil')
+  validate({}, { a = 1 }, 'different values at key "a", left = nil, right = 1')
+  validate({ 1, 2 }, { 1 }, 'different values at key 2, left = 2, right = nil')
+  validate({ 1 }, { 1, 2 }, 'different values at key 2, left = nil, right = 2')
+  validate({ a = 1, b = 2 }, { a = 1 }, 'different values at key "b", left = 2, right = nil')
+  validate({ a = 1 }, { a = 1, b = 2 }, 'different values at key "b", left = nil, right = 2')
+
+  validate({ 1 }, { 2 }, 'different values at key 1, left = 1, right = 2')
+  validate({ a = 1 }, { a = 2 }, 'different values at key "a", left = 1, right = 2')
+  validate({ 1, 2 }, { 1, 3 }, 'different values at key 2, left = 2, right = 3')
+  validate({ a = 1, b = 2 }, { a = 1, b = 3 }, 'different values at key "b", left = 2, right = 3')
+
+  validate({ 1, a = 3 }, { 2, a = 3 }, 'different values at key 1, left = 1, right = 2')
+  validate({ 1, a = 3 }, { 1, a = 4 }, 'different values at key "a", left = 3, right = 4')
+
+  validate({ { 1 } }, { {} }, 'different values at key branch 1->1, left = 1, right = nil')
+  validate({ {} }, { { 1 } }, 'different values at key branch 1->1, left = nil, right = 1')
+  validate({ { a = 1 } }, { {} }, 'different values at key branch 1->"a", left = 1, right = nil')
+  validate({ {} }, { { a = 1 } }, 'different values at key branch 1->"a", left = nil, right = 1')
+  validate({ a = { 1 } }, { a = {} }, 'different values at key branch "a"->1, left = 1, right = nil')
+  validate({ a = {} }, { a = { 1 } }, 'different values at key branch "a"->1, left = nil, right = 1')
+  validate({ a = { b = 1 } }, { a = {} }, 'different values at key branch "a"->"b", left = 1, right = nil')
+  validate({ a = {} }, { a = { b = 1 } }, 'different values at key branch "a"->"b", left = nil, right = 1')
+
+  validate({ 1, { 2 } }, { 1, 2 }, 'different values at key 2, left = { 2 }, right = 2')
+  validate({ 1, 2 }, { 1, { 2 } }, 'different values at key 2, left = 2, right = { 2 }')
+  validate({ 1, { a = 1 } }, { 1, 2 }, 'different values at key 2, left = { a = 1 }, right = 2')
+  validate({ 1, 2 }, { 1, { a = 1 } }, 'different values at key 2, left = 2, right = { a = 1 }')
+
+  validate({ { { { 1 } } } }, { { { { 2 } } } }, 'different values at key branch 1->1->1->1, left = 1, right = 2')
+
+  validate({ { 1, 2 } }, { { 1, 3 } }, 'different values at key branch 1->2, left = 2, right = 3')
+  validate({ 1, { 2 } }, { 1, { 3 } }, 'different values at key branch 2->1, left = 2, right = 3')
+
+  --->Should prefer consistent/deterministic different key
+  validate({ 1, 2, 3 }, { 1, 3, 4 }, 'different values at key 2, left = 2, right = 3')
+  validate({ 1, { 2 }, 3 }, { 1, { 3 }, 4 }, 'different values at key branch 2->1, left = 2, right = 3')
+  validate({ a = 1, b = 2, c = 3 }, { a = 1, b = 3, c = 4 }, 'different values at key "b", left = 2, right = 3')
+  validate(
+    { a = 1, b = { 2 }, c = 3 },
+    { a = 1, b = { 3 }, c = 4 },
+    'different values at key branch "b"->1, left = 2, right = 3'
+  )
+  validate({ 1, a = 3 }, { 2, a = 4 }, 'different values at key 1, left = 1, right = 2')
+
+  -- Fallback response for other types
+  validate(false, true, 'different values')
+  validate(1, 2, 'different values')
+  -- - Can not compare functions other than by their id (always different)
+  validate(function() end, function() end, 'different values')
+end
+
 T['expect']['equality()']['respects `opts.fail_reason`'] = function()
   validate_fail_reason(MiniTest.expect.equality, 'This is test 1', { 1, 2 })
   validate_fail_reason(MiniTest.expect.equality, function() return 'This is test 2' end, { 2, 3 })
