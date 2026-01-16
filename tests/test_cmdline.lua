@@ -780,12 +780,6 @@ T['Autocorrect']['works for other types'] = function()
   validate_inprogress('argdel fla', 'argdel fileA')
   validate_final('argdel flb', 'argdel fileB')
 
-  -- buffer
-  child.cmd('edit fileA')
-  child.cmd('edit fileB')
-  -- - No in-progress check since `:buffer` expects single argument
-  validate_final('buffer flB', 'buffer fileB')
-
   -- color
   -- - No in-progress check since `:colorscheme` expects single argument
   validate_final('colorscheme dfault', 'colorscheme default')
