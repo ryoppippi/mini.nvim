@@ -2954,6 +2954,29 @@ T['Preview']['can work after renaming with small overall width'] = function()
   child.expect_screenshot()
 end
 
+T['Preview']["respects global value of 'list' and 'listchars' option"] = function()
+  child.lua('MiniFiles.config.windows.width_focus = 10')
+  child.lua('MiniFiles.config.windows.width_preview = 8')
+
+  local temp_dir = make_temp_dir('temp', { 'long-directory-name/', 'long-directory-name/subfile', 'file' })
+  child.fn.writefile({ '\tTabs', '    Spaces' }, join_path(temp_dir, 'file'))
+
+  child.o.listchars = 'tab:+ ,extends:>'
+  child.o.tabstop = 4
+
+  local validate = function(list)
+    child.o.list = list
+    open(temp_dir)
+    child.expect_screenshot()
+    type_keys('<Down>')
+    child.expect_screenshot()
+    close()
+  end
+
+  validate(true)
+  validate(false)
+end
+
 T['Mappings'] = new_set()
 
 T['Mappings']['`close` works'] = function()
