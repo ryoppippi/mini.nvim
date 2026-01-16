@@ -473,7 +473,7 @@ T['start()']['creates proper window'] = function()
   eq(win_config.zindex, 251)
 
   validate_win_option(win_id, 'list', true)
-  validate_win_option(win_id, 'listchars', 'extends:…')
+  validate_win_option(win_id, 'listchars', 'extends:…,precedes:…')
   validate_win_option(win_id, 'wrap', false)
 end
 
@@ -5544,6 +5544,31 @@ T['Preview']['handles `source.preview` setting buffer directly'] = function()
   local state = get_picker_state()
   eq(state.buffers.preview, buf_id_other)
   eq(child.api.nvim_win_get_buf(state.windows.main), buf_id_other)
+end
+
+T['Preview']["respects global value of 'list' and 'listchars' option"] = function()
+  child.lua([[
+    MiniPick.config.source.preview = function(buf_id, item)
+      vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, { '\tTabs', '    Spaces' })
+    end
+    MiniPick.config.window.config = { width = 8 }
+  ]])
+  child.o.listchars = 'tab:+ '
+  child.o.tabstop = 4
+  local validate = function(list)
+    child.o.list = list
+    start_with_items({ 'a long item' })
+    type_keys('<Tab>')
+    child.expect_screenshot()
+    -- Should always enable 'list' option in main view
+    type_keys('<Tab>')
+    child.expect_screenshot()
+
+    type_keys('<Esc>')
+  end
+
+  validate(true)
+  validate(false)
 end
 
 T['Matching'] = new_set()
