@@ -334,11 +334,8 @@ T['align_strings()']['respects `steps.pre_justify` argument'] = function()
   -- Should validate that step correctly modified in place
   step_str = [[MiniAlign.new_step('tmp', function(parts) parts[1][1] = 1 end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { pre_justify = { %s } })]], step_str)
-  expect.error(
-    child.lua,
-    vim.pesc('Step `tmp` of `pre_justify` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'),
-    cmd
-  )
+  local ref_text = 'Step `tmp` of `pre_justify` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'
+  expect.error(function() child.lua(cmd) end, vim.pesc(ref_text))
 
   -- Uses `MiniAlign.config.steps` as default
   set_config_steps({ pre_justify = [[{ MiniAlign.new_step('tmp', function(parts) parts[1][1] = 'xxx' end) }]] })
@@ -369,11 +366,8 @@ T['align_strings()']['respects `steps.justify` argument'] = function()
   -- Should validate that step correctly modified in place
   step_str = [[MiniAlign.new_step('tmp', function(parts) parts[1][1] = 1 end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { justify = %s })]], step_str)
-  expect.error(
-    child.lua,
-    vim.pesc('Step `tmp` of `justify` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'),
-    cmd
-  )
+  local ref_text = 'Step `tmp` of `justify` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'
+  expect.error(function() child.lua(cmd) end, vim.pesc(ref_text))
 
   -- Is called with `opts`
   step_str = [[MiniAlign.new_step('tmp', function(parts, opts) parts[1][1] = opts.tmp end)]]
@@ -393,11 +387,8 @@ T['align_strings()']['respects `steps.pre_merge` argument'] = function()
   -- Should validate that step correctly modified in place
   step_str = [[MiniAlign.new_step('tmp', function(parts) parts[1][1] = 1 end)]]
   cmd = string.format([[MiniAlign.align_strings({ 'a=b', 'aa=b' }, {}, { pre_merge = { %s } })]], step_str)
-  expect.error(
-    child.lua,
-    vim.pesc('Step `tmp` of `pre_merge` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'),
-    cmd
-  )
+  local ref_text = 'Step `tmp` of `pre_merge` should preserve structure of `parts`. See `:h MiniAlign.as_parts()`.'
+  expect.error(function() child.lua(cmd) end, vim.pesc(ref_text))
 
   -- Uses `MiniAlign.config.steps` as default
   set_config_steps({ pre_merge = [[{ MiniAlign.new_step('tmp', function(parts) parts[1][1] = 'xxx' end) }]] })
@@ -746,14 +737,10 @@ T['gen_step']['default_split()']['works'] = function()
 end
 
 T['gen_step']['default_split()']['verifies relevant options'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.align_strings({ 'a' }, { split_pattern = 1 }, {})]]) end,
-    'Option `split_pattern`.*string or array of strings'
-  )
-  expect.error(
-    function() child.lua([[MiniAlign.align_strings({ 'a' }, { split_exclude_patterns = 1 }, {})]]) end,
-    'Option `split_exclude_patterns`.*array of strings'
-  )
+  local pat = 'Option `split_pattern`.*string or array of strings'
+  expect.error(function() child.lua('MiniAlign.align_strings({ "a" }, { split_pattern = 1 }, {})') end, pat)
+  pat = 'Option `split_exclude_patterns`.*array of strings'
+  expect.error(function() child.lua('MiniAlign.align_strings({ "a" }, { split_exclude_patterns = 1 }, {})') end, pat)
 end
 
 T['gen_step']['default_split()']['allows split Lua pattern'] = function()
@@ -762,10 +749,8 @@ T['gen_step']['default_split()']['allows split Lua pattern'] = function()
 end
 
 T['gen_step']['default_split()']['verifies bad split pattern'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.align_strings({ 'a ' }, { split_pattern = '%f[%s]' })]]) end,
-    vim.pesc('(mini.align) Pattern "%f[%s]" can not advance search.')
-  )
+  local pat = vim.pesc('(mini.align) Pattern "%f[%s]" can not advance search.')
+  expect.error(function() child.lua('MiniAlign.align_strings({ "a " }, { split_pattern = "%f[%s]" })') end, pat)
 end
 
 T['gen_step']['default_split()']['works with different number of output parts'] = function()
@@ -881,10 +866,8 @@ T['gen_step']['default_justify()']['works'] = function()
 end
 
 T['gen_step']['default_justify()']['verifies relevant options'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.align_strings({ 'a' }, { justify_side = 1 }, {})]]) end,
-    'Option `justify_side`.*one of.*or array'
-  )
+  local pat = 'Option `justify_side`.*one of.*or array'
+  expect.error(function() child.lua('MiniAlign.align_strings({ "a" }, { justify_side = 1 }, {})') end, pat)
 end
 
 T['gen_step']['default_justify()']['works with multibyte characters'] = function()
@@ -968,10 +951,8 @@ T['gen_step']['default_merge()']['works in edge cases'] = function()
 end
 
 T['gen_step']['default_merge()']['verifies relevant options'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.align_strings({ 'a' }, { merge_delimiter = 1 }, {})]]) end,
-    'Option `merge_delimiter`.*string or array of strings'
-  )
+  local pat = 'Option `merge_delimiter`.*string or array of strings'
+  expect.error(function() child.lua('MiniAlign.align_strings({ "a" }, { merge_delimiter = 1 }, {})') end, pat)
 end
 
 T['gen_step']['default_merge()']['does not merge empty strings in parts'] = function()
@@ -1012,10 +993,8 @@ T['gen_step']['filter()']['works'] = function()
 end
 
 T['gen_step']['filter()']['validates input'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.gen_step.filter('(')]]) end,
-    [[%(mini%.align%) "%(" is not a valid filter expression]]
-  )
+  local pat = '%(mini%.align%) "%(" is not a valid filter expression'
+  expect.error(function() child.lua('MiniAlign.gen_step.filter("(")') end, pat)
 end
 
 T['gen_step']['filter()']['handles special input'] = function()
@@ -1073,14 +1052,10 @@ T['gen_step']['ignore_split()']['works'] = function()
 end
 
 T['gen_step']['ignore_split()']['validates input'] = function()
-  expect.error(
-    function() child.lua([[MiniAlign.gen_step.ignore_split('(')]]) end,
-    [[Argument `patterns`.*array of strings]]
-  )
-  expect.error(
-    function() child.lua([[MiniAlign.gen_step.ignore_split({}, 1)]]) end,
-    [[Argument `exclude_comment`.*boolean]]
-  )
+  local pat = 'Argument `patterns`.*array of strings'
+  expect.error(function() child.lua('MiniAlign.gen_step.ignore_split("(")') end, pat)
+  pat = 'Argument `exclude_comment`.*boolean'
+  expect.error(function() child.lua('MiniAlign.gen_step.ignore_split({}, 1)') end, pat)
 end
 
 T['gen_step']['ignore_split()']['respects `patterns` argument'] = function()
