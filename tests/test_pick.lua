@@ -2766,9 +2766,11 @@ T['builtin.grep()']['works'] = function()
 
   child.lua_notify([[_G.grep_item = MiniPick.builtin.grep()]])
   -- - By default asks for pattern interactively
-  type_keys('b', '<CR>')
+  type_keys('b')
+  child.expect_screenshot()
 
   -- Should use icons by default
+  type_keys('<CR>')
   child.expect_screenshot()
 
   -- Should set correct name
@@ -2836,6 +2838,21 @@ T['builtin.grep()']['respects `local_opts.pattern`'] = function()
   eq(#spawn_log, 1)
   local args = spawn_log[1].options.args
   eq(vim.list_slice(args, #args - 3), { '--color=never', '--case-sensitive', '--', 'abc' })
+end
+
+T['builtin.grep()']['can cancel user input'] = function()
+  mock_fn_executable({ 'rg' })
+
+  local validate = function(keys)
+    mock_cli_return({})
+    builtin_grep({ tool = 'rg' })
+    type_keys(keys)
+    eq(is_picker_active(), false)
+    eq(get_spawn_log(), {})
+  end
+
+  validate('<C-c>')
+  validate('<Esc>')
 end
 
 T['builtin.grep()']['respects `local_opts.globs`'] = function()
