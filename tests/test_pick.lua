@@ -3045,7 +3045,7 @@ T['builtin.grep_live()']['always shows no items for empty query'] = function()
   eq(#get_spawn_log(), 1)
 end
 
-T['builtin.grep_live()']['kills grep process on every non-empty query update'] = function()
+T['builtin.grep_live()']['fully stops grep process on every non-empty query update'] = function()
   mock_fn_executable({ 'rg' })
   local items = { real_file('a.lua') .. '\0003\0003\000a', real_file('b.txt') .. '\0001\0001\000b' }
 
@@ -3055,13 +3055,15 @@ T['builtin.grep_live()']['kills grep process on every non-empty query update'] =
   mock_cli_return(items)
   type_keys('b')
   -- - No process to kill before making query non-empty
-  eq(get_process_log(), { 'Stdout Stdout_1 was closed.', 'Process Pid_1 was closed.' })
+  --stylua: ignore
+  eq(get_process_log(), { 'Stdout Stdout_1 finished reading.', 'Stdout Stdout_1 was closed.', 'Process Pid_1 was closed.' })
   clear_process_log()
 
   mock_cli_return({ items[2] })
   type_keys('y')
-  --Stylua: ignore
-  eq(get_process_log(), { 'Process Pid_1 was killed.', 'Stdout Stdout_2 was closed.', 'Process Pid_2 was closed.' })
+  --stylua: ignore
+  local ref_log = { 'Process Pid_1 was killed.', 'Stdout Stdout_2 finished reading.', 'Stdout Stdout_2 was closed.', 'Process Pid_2 was closed.' }
+  eq(get_process_log(), ref_log)
   clear_process_log()
 
   type_keys('<C-u>')
@@ -4232,15 +4234,15 @@ end
 T['set_picker_items_from_cli()'] = new_set({ hooks = { pre_case = mock_spawn } })
 
 local set_picker_items_from_cli = function(...)
-  -- Work around tuples and callables being not transferrable through RPC
-  local tuple = child.lua(
-    [[local process, pid = MiniPick.set_picker_items_from_cli(...)
-      local process_keys = vim.tbl_filter(function(x) return x:sub(1, 1) ~= '_' end, vim.tbl_keys(process))
-      table.sort(process_keys)
-      return { process_keys, pid }]],
+  -- Work around callables being not transferrable through RPC
+  return child.lua(
+    [[local res = MiniPick.set_picker_items_from_cli(...)
+      for k, v in pairs(res) do
+        if type(v) == 'function' then res[k] = 'function' end
+      end
+      return res]],
     { ... }
   )
-  return unpack(tuple)
 end
 
 local test_command = { 'echo', 'a\nb\nc' }
@@ -4248,7 +4250,7 @@ local test_command = { 'echo', 'a\nb\nc' }
 T['set_picker_items_from_cli()']['works'] = function()
   start_with_items()
   mock_stdout_feed({ 'abc\ndef\n', 'ghi' })
-  local process_keys, pid = set_picker_items_from_cli({ 'command', 'arg1', 'arg2' })
+  local out = set_picker_items_from_cli({ 'command', 'arg1', 'arg2' })
 
   -- Should actually set picker items
   eq(get_picker_items(), { 'abc', 'def', 'ghi' })
@@ -4257,11 +4259,11 @@ T['set_picker_items_from_cli()']['works'] = function()
   validate_spawn_log({ { executable = 'command', options = { args = { 'arg1', 'arg2' } } } })
 
   -- Should properly handle process and stdout
-  eq(get_process_log(), { 'Stdout Stdout_1 was closed.', 'Process Pid_1 was closed.' })
+  --stylua: ignore
+  eq(get_process_log(), { 'Stdout Stdout_1 finished reading.', 'Stdout Stdout_1 was closed.', 'Process Pid_1 was closed.' })
 
   -- Should return proper data
-  eq(process_keys, { 'close', 'is_active', 'pid' })
-  eq(pid, 'Pid_1')
+  eq(out, { pid = 'Pid_1', kill = 'function' })
 end
 
 T['set_picker_items_from_cli()']['can override items'] = function()
@@ -4299,25 +4301,32 @@ T['set_picker_items_from_cli()']['correctly detects error in stdout feed'] = fun
   expect.error(function() set_picker_items_from_cli(test_command) end, 'Test stdout error')
 end
 
-T['set_picker_items_from_cli()']['stops process if picker is stopped'] = function()
-  local delay = 3 * small_time
+T['set_picker_items_from_cli()']['fully stops the process if picker is stopped'] = function()
+  local delay = 5 * small_time
   child.lua('_G.delay = ' .. delay)
   child.lua([[
     local is_active_indicator = true
+    local is_closing_indicator = false
+
     vim.loop.spawn = function(path, options, on_exit)
       vim.defer_fn(on_exit, _G.delay)
 
       local process = {
         pid = 'Pid_1',
+
         is_active = function() return is_active_indicator end,
-        close = function(_) table.insert(_G.process_log, 'Process Pid_1 was closed.') end,
+        kill = function()
+          is_active_indicator = false
+          table.insert(_G.process_log, 'Process Pid_1 was killed.')
+        end,
+
+        is_closing = function() return is_closing_indicator end,
+        close = function(_)
+          is_closing_indicator = true
+          table.insert(_G.process_log, 'Process Pid_1 was closed.')
+        end,
       }
       return process, pid
-    end
-    vim.loop.process_kill = function(process)
-      -- Killing process also means it stops being active
-      is_active_indicator = false
-      table.insert(_G.process_log, 'Process Pid_1 was killed.')
     end
   ]])
 
@@ -4326,8 +4335,9 @@ T['set_picker_items_from_cli()']['stops process if picker is stopped'] = functio
   sleep(small_time)
   type_keys('<Esc>')
   sleep(delay)
-  -- Should kill the process without later calling `process:close()`
-  eq(get_process_log(), { 'Stdout Stdout_1 was closed.', 'Process Pid_1 was killed.' })
+  --stylua: ignore
+  local ref_log = { 'Stdout Stdout_1 finished reading.', 'Stdout Stdout_1 was closed.', 'Process Pid_1 was killed.', 'Process Pid_1 was closed.' }
+  eq(get_process_log(), ref_log)
 
   -- Should clean possible helper autocommands
   eq(child.cmd_capture('au User'), '--- Autocommands ---')
