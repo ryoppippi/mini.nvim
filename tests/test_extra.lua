@@ -1570,7 +1570,13 @@ T['pickers']['git_branches()']['works'] = function()
     { executable = 'git', options = { args = { '-C', repo_dir, 'log', 'main', '--format=format:%h %s' } } },
   })
   -- - It should properly close both stdout and stderr
-  eq(get_process_log(), { 'stdout_2 was closed.', 'stderr_1 was closed.', 'Process Pid_2 was closed.' })
+  --stylua: ignore
+  local ref_log = {
+    'stdout_2 finished reading.', 'stdout_2 was closed.',
+    'stderr_1 finished reading.', 'stderr_1 was closed.',
+    'Process Pid_2 was closed.',
+  }
+  eq(get_process_log(), ref_log)
 
   -- Should properly choose by showing history in the new scratch buffer
   child.lua([[_G.stream_type_queue = { 'stdout', 'stderr' }]])
@@ -1723,7 +1729,13 @@ T['pickers']['git_commits()']['works'] = function()
     { executable = 'git', options = { args = { '-C', repo_dir, '--no-pager', 'show', '1111111' } } },
   })
   -- - It should properly close both stdout and stderr
-  eq(get_process_log(), { 'stdout_2 was closed.', 'stderr_1 was closed.', 'Process Pid_2 was closed.' })
+  --stylua: ignore
+  local ref_log = {
+    'stdout_2 finished reading.', 'stdout_2 was closed.',
+    'stderr_1 finished reading.', 'stderr_1 was closed.',
+    'Process Pid_2 was closed.',
+  }
+  eq(get_process_log(), ref_log)
 
   -- Should properly choose by showing commit in the new scratch buffer
   child.lua([[_G.stream_type_queue = { 'stdout', 'stderr' }]])
