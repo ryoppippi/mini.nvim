@@ -4283,14 +4283,14 @@ end
 T['set_picker_items_from_cli()']['correctly processes stdout feed'] = function()
   -- Should stich items together without adding '\n'
   start_with_items()
-  mock_stdout_feed({ 'aa\n', 'bb', 'cc\n', 'dd', '\nee' })
+  mock_stdout_feed({ 'aa\n', 'bb', 'cc\n', 'dd', '\nee', 'ff', 'gg', '\nhh\n' })
   set_picker_items_from_cli(test_command)
-  eq(get_picker_items(), { 'aa', 'bbcc', 'dd', 'ee' })
+  eq(get_picker_items(), { 'aa', 'bbcc', 'dd', 'eeffgg', 'hh' })
   stop()
 
   -- Should respect both '\r\n' and '\n' to split items
   start_with_items()
-  mock_stdout_feed({ 'aa\nbb\r\ncc\rdd\nee' })
+  mock_stdout_feed({ 'aa\nbb\r\ncc\rdd\nee\r\n' })
   set_picker_items_from_cli(test_command)
   eq(get_picker_items(), { 'aa', 'bb', 'cc\rdd', 'ee' })
 end
@@ -4366,7 +4366,7 @@ T['set_picker_items_from_cli()']['respects `opts.postprocess`'] = function()
     }
   )]])
   eq(get_picker_items(), { 'item 1', 'item 2', 'item 3', 'item 4' })
-  eq(child.lua_get('_G.postprocess_input'), { 'aa', 'bb', '' })
+  eq(child.lua_get('_G.postprocess_input'), { 'aa', 'bb' })
 end
 
 T['set_picker_items_from_cli()']['respects `opts.set_item_opts`'] = function()
