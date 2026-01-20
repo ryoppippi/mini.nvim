@@ -3178,25 +3178,30 @@ end
 T['pickers']['manpages()'] = new_set({
   hooks = {
     pre_case = function()
-      if child.fn.has('nvim-0.10') == 0 then
-        expect.error(function() child.lua('MiniExtra.pickers.manpages()') end, '`manpages` picker needs Neovim>=0%.10')
-        MiniTest.skip('`manpages` picker needs Neovim>=0.10')
-      end
-
       -- Mock `vim.loop.spawn` for `MiniPick.builtin.cli()`
       mock_spawn()
 
-      -- Mock `vim.system` for preview
-      child.cmd('luafile tests/mock-system/vim-system.lua')
-
-      -- Mock `vim.fn.executable` for a robust testing
+      -- Mock `:Man` command for robust testing
       child.lua([[
-        _G.has_col = false
-        local executable_orig = vim.fn.executable
-        vim.fn.executable = function(expr)
-          if expr == 'col' then return _G.has_col and 1 or 0 end
-          return executable_orig(expr)
+        _G.man_cmd_log = {}
+        local callback = function(cmd_data)
+          table.insert(_G.man_cmd_log, cmd_data)
+
+          -- Mock opening a manpage buffer in the same window
+          local name, section = cmd_data.fargs[2], cmd_data.fargs[1]
+          local buf_name = string.format('man://%s(%s)', name, section)
+          -- table.insert(_G.man_cmd_log, buf_name)
+          vim.cmd('noautocmd edit! ' .. vim.fn.fnameescape(buf_name))
+
+          local lines = { string.format('%s (%s) - Manual Page', name, section) }
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+          vim.bo.modified = false
+
+          vim.bo.filetype = 'man'
         end
+
+        local opts = { addr = 'other', bang = true, bar = true, nargs = '*', range = true }
+        vim.api.nvim_create_user_command('Man', callback, opts)
       ]])
     end,
   },
@@ -3226,6 +3231,7 @@ T['pickers']['manpages()']['works'] = function()
   child.set_size(20, 70)
   mock_man_list()
 
+  -- Should compute items with `man -k .` system call
   child.fn.setenv('PATH', '/home,/home/user')
   child.fn.setenv('MANPATH', '/home,/home/manpage')
   child.lua_notify('_G.return_item = MiniExtra.pickers.manpages()')
@@ -3238,86 +3244,65 @@ T['pickers']['manpages()']['works'] = function()
   clear_spawn_log()
   clear_process_log()
 
-  -- Should preview with correct `vim.system` usage
-  child.lua([[
-    _G.system_queue = {
-      { stdout = 'st (1) - Manual Page' },
-      { stdout = 'IO::Socket::IP (3perl) - Manual Page' },
-      { stdout = 'alacritty (1) - Manual Page' },
-      { stdout = 'afterstep_faq (1) - Manual Page' },
-      { stdout = 'alacritty-msg(1) - Manual Page' },
-      { stdout = 'amd64_iopl(2/amd64) - Manual Page' },
-    }
-  ]])
-
+  -- Should use `:Man` to preview and choose manpage
   local preview_win_id = child.lua_get('MiniPick.get_picker_state().windows.main')
-  local preview_width = child.api.nvim_win_get_width(preview_win_id)
 
-  local validate_manpage_buf = function(buf_id, ref_name)
-    -- Should set proper options in preview buffer (for syntax highlight)
-    local scope = child.fn.has('nvim-0.11') == 1 and 'local' or nil
-    eq(child.api.nvim_get_option_value('modified', { scope = scope, buf = buf_id }), false)
-    eq(child.api.nvim_get_option_value('filetype', { scope = scope, buf = buf_id }), 'man')
-
-    local name = child.api.nvim_buf_get_name(buf_id)
-    if ref_name ~= nil then
-      eq(name, ref_name)
-    else
-      expect.match(name, 'minipick://%d+/preview')
-    end
+  local buf_scope = child.fn.has('nvim-0.11') == 1 and 'local' or nil
+  local get_buf_option = function(buf_id, name)
+    return child.api.nvim_get_option_value(name, { scope = buf_scope, buf = buf_id })
   end
 
-  local validate_preview = function(ref_cmd)
-    local ref_log = {
-      { 'vim.system', { cmd = ref_cmd, opts = { env = { MANWIDTH = preview_width, MANPAGER = 'cat' } } } },
-      { 'wait', {} },
-    }
-    eq(child.lua_get('_G.system_log'), ref_log)
-    child.lua('_G.system_log = {}')
+  local validate_preview = function(ref_man_args)
+    local man_cmd_log = child.lua_get('_G.man_cmd_log')
+    eq(#man_cmd_log, 1)
+    eq(man_cmd_log[1].args, ref_man_args)
+    eq(man_cmd_log[1].mods, 'hide')
+    child.lua('_G.man_cmd_log = {}')
+    child.lua('_G.log = {}')
 
-    -- NOTE: Should not name buffer to avoid name conflict after `choose`
-    validate_manpage_buf(child.api.nvim_win_get_buf(preview_win_id), nil)
+    -- Should force non-listed temporary buffer
+    local buf_id = child.api.nvim_win_get_buf(preview_win_id)
+    eq(get_buf_option(buf_id, 'buflisted'), false)
+    eq(get_buf_option(buf_id, 'bufhidden'), 'wipe')
   end
 
   type_keys('<Tab>')
 
   -- - Should use syntax `man <section> <command>`
-  validate_preview({ 'man', '1', 'st' })
+  validate_preview('1 st')
   child.expect_screenshot()
 
   -- - Should extract valid section value (see `:Man man`)
   type_keys('<C-n>')
-  validate_preview({ 'man', '3perl', 'IO::Socket::IP' })
+  validate_preview('3perl IO::Socket::IP')
 
   -- - Should use first command if there are several
   type_keys('<C-n>')
-  validate_preview({ 'man', '1', 'alacritty' })
+  validate_preview('1 alacritty')
 
   -- - Should use first section if there are several
   type_keys('<C-n>')
-  validate_preview({ 'man', '1', 'afterstep_faq' })
+  validate_preview('1 afterstep_faq')
 
   -- - Should handle no space before `(section)`
   type_keys('<C-n>')
-  validate_preview({ 'man', '1', 'alacritty-msg' })
+  validate_preview('1 alacritty-msg')
 
   -- - Should handle non-digits in `(section)`
   type_keys('<C-n>')
-  validate_preview({ 'man', '2', 'amd64_iopl' })
+  validate_preview('2 amd64_iopl')
 
   -- Should properly choose by showing manpage in target window (not split)
-  child.lua([[_G.system_queue = { { stdout = 'amd64_iopl(2/amd64) - Full page' } }]])
   type_keys('<CR>')
   child.expect_screenshot()
   validate_buf_name(0, 'man://amd64_iopl(2)')
+  -- - Should not preserve `buflisted=false` from preview
+  eq(get_buf_option(0, 'buflisted'), true)
 
-  local target_win_width = child.api.nvim_win_get_width(0)
-  local ref_env = { MANPAGER = 'cat', MANWIDTH = target_win_width }
-  local choose_log = {
-    { 'vim.system', { cmd = { 'man', '2', 'amd64_iopl' }, opts = { env = ref_env } } },
-    { 'wait', {} },
-  }
-  eq(child.lua_get('_G.system_log'), choose_log)
+  local man_cmd_log = child.lua_get('_G.man_cmd_log')
+  eq(#man_cmd_log, 1)
+  eq(man_cmd_log[1].args, '2 amd64_iopl')
+  eq(man_cmd_log[1].mods, 'hide')
 
   -- Should return chosen value
   eq(child.lua_get('_G.return_item'), 'amd64_iopl(2/amd64)')
@@ -3332,36 +3317,8 @@ end
 T['pickers']['manpages()']['can choose in split'] = function()
   mock_man_list()
   pick_manpages()
-
-  child.lua([[_G.system_queue = { { stdout = 'st (1) - Full page' } }]])
   type_keys('<C-v>')
   child.expect_screenshot()
-end
-
-T['pickers']['manpages()']['can choose proper manpager'] = function()
-  child.lua('_G.has_col = true')
-  mock_man_list()
-  pick_manpages()
-
-  child.lua([[_G.system_queue = {
-    { stdout = 'st (1) - Full page' },
-    { stdout = 'st (1) - Full page' },
-  }]])
-  local preview_win_id = child.lua_get('MiniPick.get_picker_state().windows.main')
-  local preview_width = child.api.nvim_win_get_width(preview_win_id)
-
-  type_keys('<Tab>')
-  local ref_env = { MANWIDTH = preview_width, MANPAGER = 'col -bx' }
-  local ref_log = {
-    { 'vim.system', { cmd = { 'man', '1', 'st' }, opts = { env = ref_env } } },
-    { 'wait', {} },
-  }
-  eq(child.lua_get('_G.system_log'), ref_log)
-  child.lua('_G.system_log = {}')
-
-  type_keys('<CR>')
-  ref_log[1][2].opts.env.MANWIDTH = child.api.nvim_win_get_width(0)
-  eq(child.lua_get('_G.system_log'), ref_log)
 end
 
 T['pickers']['manpages()']['respects `opts`'] = function()
@@ -3371,6 +3328,11 @@ end
 
 T['pickers']['manpages()']['respects global source options'] = function()
   validate_global_source_options(pick_manpages, false, false)
+end
+
+T['pickers']['manpages()']['validates `:Man` dependency'] = function()
+  child.api.nvim_del_user_command('Man')
+  expect.error(function() child.lua('MiniExtra.pickers.manpages()') end, '`manpages` picker needs `:Man` command')
 end
 
 T['pickers']['marks()'] = new_set()
