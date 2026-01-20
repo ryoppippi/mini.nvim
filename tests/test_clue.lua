@@ -314,6 +314,29 @@ T['setup()']['creates triggers for already created buffers'] = function()
   validate_trigger_keymap('n', 'g', other_buf_id)
 end
 
+T['setup()']['does not affect buffer-local options'] = function()
+  --stylua: ignore
+  child.restart({
+    '--cmd', 'let &rtp.=",".getcwd()',
+    -- Executing `setup()` before `vim.o.expandtab=true` might lead to the new
+    -- option value not take effect for not current buffers. Originally because
+    -- enabling triggers force loaded buffers that were not yet loaded, which
+    -- "finalized" default value as buffer-local value.
+    '--cmd', 'lua require("mini.clue").setup({ triggers={ { mode="n", keys="<Space>" } } })',
+    '--cmd', 'lua vim.o.expandtab = true',
+    '--', 'file-a', 'file-b',
+  })
+  local validate = function(ref_buf_name)
+    local buf_name = child.api.nvim_buf_get_name(0)
+    eq(vim.fn.fnamemodify(buf_name, ':t'), ref_buf_name)
+    eq(child.bo.expandtab, true)
+  end
+
+  validate('file-a')
+  child.cmd('bnext')
+  validate('file-b')
+end
+
 T['setup()']['creates triggers for an array of modes'] = function()
   load_module({ triggers = { { mode = { 'n', 'x' }, keys = 'g' } } })
   validate_trigger_keymap('n', 'g')
