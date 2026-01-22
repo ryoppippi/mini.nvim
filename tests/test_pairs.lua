@@ -291,24 +291,18 @@ T['setup()']['creates `config` field'] = function()
 
   -- Check default values
   expect_config('modes', { insert = true, command = false, terminal = false })
-  expect_config("mappings['(']", { action = 'open', pair = '()', neigh_pattern = '[^\\].' })
-  expect_config("mappings['[']", { action = 'open', pair = '[]', neigh_pattern = '[^\\].' })
-  expect_config("mappings['{']", { action = 'open', pair = '{}', neigh_pattern = '[^\\].' })
-  expect_config("mappings[')']", { action = 'close', pair = '()', neigh_pattern = '[^\\].' })
-  expect_config("mappings[']']", { action = 'close', pair = '[]', neigh_pattern = '[^\\].' })
-  expect_config("mappings['}']", { action = 'close', pair = '{}', neigh_pattern = '[^\\].' })
-  expect_config(
-    "mappings['\"']",
-    { action = 'closeopen', pair = '""', neigh_pattern = '[^\\].', register = { cr = false } }
-  )
-  expect_config(
-    'mappings["\'"]',
-    { action = 'closeopen', pair = "''", neigh_pattern = '[^%a\\].', register = { cr = false } }
-  )
-  expect_config(
-    "mappings['`']",
-    { action = 'closeopen', pair = '``', neigh_pattern = '[^\\].', register = { cr = false } }
-  )
+  expect_config("mappings['(']", { action = 'open', pair = '()', neigh_pattern = '^[^\\]' })
+  expect_config("mappings['[']", { action = 'open', pair = '[]', neigh_pattern = '^[^\\]' })
+  expect_config("mappings['{']", { action = 'open', pair = '{}', neigh_pattern = '^[^\\]' })
+  expect_config("mappings[')']", { action = 'close', pair = '()', neigh_pattern = '^[^\\]' })
+  expect_config("mappings[']']", { action = 'close', pair = '[]', neigh_pattern = '^[^\\]' })
+  expect_config("mappings['}']", { action = 'close', pair = '{}', neigh_pattern = '^[^\\]' })
+  local quote_config = { action = 'closeopen', pair = '""', neigh_pattern = '^[^\\]', register = { cr = false } }
+  expect_config("mappings['\"']", quote_config)
+  quote_config.pair, quote_config.neigh_pattern = "''", '^[^%a\\]'
+  expect_config('mappings["\'"]', quote_config)
+  quote_config.pair, quote_config.neigh_pattern = '``', '^[^\\]'
+  expect_config("mappings['`']", quote_config)
 end
 
 T['setup()']['respects `config` argument'] = function()
@@ -361,15 +355,15 @@ local has_map = function(lhs, rhs, mode)
 end
 
 T['setup()']['makes default `config.mappings`'] = function()
-  eq(has_map('(', [[v:lua.MiniPairs.open("()", "[^\\].")]]), true)
-  eq(has_map('[', [[v:lua.MiniPairs.open("[]", "[^\\].")]]), true)
-  eq(has_map('{', [[v:lua.MiniPairs.open("{}", "[^\\].")]]), true)
-  eq(has_map(')', [[v:lua.MiniPairs.close("()", "[^\\].")]]), true)
-  eq(has_map(']', [[v:lua.MiniPairs.close("[]", "[^\\].")]]), true)
-  eq(has_map('}', [[v:lua.MiniPairs.close("{}", "[^\\].")]]), true)
-  eq(has_map('"', [[v:lua.MiniPairs.closeopen('""', "[^\\].")]]), true)
-  eq(has_map("'", [[v:lua.MiniPairs.closeopen("''", "[^%a\\].")]]), true)
-  eq(has_map('`', [[v:lua.MiniPairs.closeopen("``", "[^\\].")]]), true)
+  eq(has_map('(', [[v:lua.MiniPairs.open("()", "^[^\\]")]]), true)
+  eq(has_map('[', [[v:lua.MiniPairs.open("[]", "^[^\\]")]]), true)
+  eq(has_map('{', [[v:lua.MiniPairs.open("{}", "^[^\\]")]]), true)
+  eq(has_map(')', [[v:lua.MiniPairs.close("()", "^[^\\]")]]), true)
+  eq(has_map(']', [[v:lua.MiniPairs.close("[]", "^[^\\]")]]), true)
+  eq(has_map('}', [[v:lua.MiniPairs.close("{}", "^[^\\]")]]), true)
+  eq(has_map('"', [[v:lua.MiniPairs.closeopen('""', "^[^\\]")]]), true)
+  eq(has_map("'", [[v:lua.MiniPairs.closeopen("''", "^[^%a\\]")]]), true)
+  eq(has_map('`', [[v:lua.MiniPairs.closeopen("``", "^[^\\]")]]), true)
 
   eq(has_map('<CR>', 'v:lua.MiniPairs.cr()'), true)
   eq(has_map('<BS>', 'v:lua.MiniPairs.bs()'), true)
@@ -377,7 +371,7 @@ end
 
 T['setup()']['makes custom `config.mappings`'] = function()
   reload_module({ mappings = { ['('] = { pair = '[]', action = 'close' } } })
-  eq(has_map('(', [[v:lua.MiniPairs.close("[]", "[^\\].")]]), true)
+  eq(has_map('(', [[v:lua.MiniPairs.close("[]", "^[^\\]")]]), true)
 
   reload_module({ mappings = { ['*'] = { pair = '**', action = 'closeopen' } } })
   eq(has_map('*', 'v:lua.MiniPairs.closeopen("**", "..")'), true)
@@ -387,16 +381,40 @@ T['setup()']['makes mappings in supplied modes'] = function()
   child.api.nvim_del_keymap('i', '(')
   reload_module({ modes = { insert = false, command = true, terminal = false } })
 
-  eq(has_map('(', [[v:lua.MiniPairs.open("()", "[^\\].")]]), false)
-  eq(has_map('(', [[v:lua.MiniPairs.open("()", "[^\\].")]], 'c'), true)
+  eq(has_map('(', [[v:lua.MiniPairs.open("()", "^[^\\]")]]), false)
+  eq(has_map('(', [[v:lua.MiniPairs.open("()", "^[^\\]")]], 'c'), true)
 end
 
 T['setup()']['allows `false` as `mappings` entry to not create mapping'] = function()
-  eq(has_map('(', [[v:lua.MiniPairs.open("()", "[^\\].")]]), true)
+  eq(has_map('(', [[v:lua.MiniPairs.open("()", "^[^\\]")]]), true)
   child.api.nvim_del_keymap('i', '(')
 
   reload_module({ mappings = { ['('] = false } })
-  eq(has_map('(', [[v:lua.MiniPairs.open("()", "[^\\].")]]), false)
+  eq(has_map('(', [[v:lua.MiniPairs.open("()", "^[^\\]")]]), false)
+end
+
+T['setup()']['has default neighborhood patterns working with multibyte characters'] = function()
+  local validate = function(line_before, col_before, key, line_after)
+    set_lines({ line_before })
+    set_cursor(1, col_before)
+    type_keys('i', '\\', key)
+
+    eq(get_lines(), { line_after })
+
+    child.ensure_normal_mode()
+  end
+
+  validate('є', 0, '(', '\\(є')
+  validate('є', 0, '[', '\\[є')
+  validate('є', 0, '{', '\\{є')
+
+  validate('є)', 2, ')', 'є\\))')
+  validate('є]', 2, ']', 'є\\]]')
+  validate('є}', 2, '}', 'є\\}}')
+
+  validate('є', 0, '"', '\\"є')
+  validate('є', 0, "'", "\\'є")
+  validate('є', 0, '`', '\\`є')
 end
 
 T['map()/map_buf()'] = new_set({
