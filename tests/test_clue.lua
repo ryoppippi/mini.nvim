@@ -322,7 +322,7 @@ T['setup()']['does not affect buffer-local options'] = function()
     -- option value not take effect for not current buffers. Originally because
     -- enabling triggers force loaded buffers that were not yet loaded, which
     -- "finalized" default value as buffer-local value.
-    '--cmd', 'lua require("mini.clue").setup({ triggers={ { mode="n", keys="<Space>" } } })',
+    '--cmd', 'lua require("mini.clue").setup({ triggers = { { mode = "n", keys = "<Space>" } } })',
     '--cmd', 'lua vim.o.expandtab = true',
     '--', 'file-a', 'file-b',
   })
@@ -330,11 +330,17 @@ T['setup()']['does not affect buffer-local options'] = function()
     local buf_name = child.api.nvim_buf_get_name(0)
     eq(vim.fn.fnamemodify(buf_name, ':t'), ref_buf_name)
     eq(child.bo.expandtab, true)
+    validate_trigger_keymap('n', '<Space>')
   end
 
   validate('file-a')
   child.cmd('bnext')
   validate('file-b')
+
+  -- Should still enable triggers if buffer is unloaded and then reloaded
+  child.cmd('bunload file-a')
+  child.cmd('edit file-a')
+  validate('file-a')
 end
 
 T['setup()']['creates triggers for an array of modes'] = function()
@@ -351,6 +357,7 @@ T['setup()']['creates triggers only in listed buffers'] = function()
   validate_no_trigger_keymap('n', '<Space>', buf_id_nolisted)
 
   local buf_id_nolisted_new = child.api.nvim_create_buf(false, true)
+  child.api.nvim_set_current_buf(buf_id_nolisted_new)
   validate_no_trigger_keymap('n', '<Space>', buf_id_nolisted_new)
 end
 
@@ -439,6 +446,7 @@ T['setup()']['respects `vim.b.miniclue_config`'] = function()
   validate_trigger_keymap('n', '<Space>', init_buf_id)
 
   local other_buf_id = child.api.nvim_create_buf(true, false)
+  child.api.nvim_set_current_buf(other_buf_id)
   validate_trigger_keymap('n', 'g', other_buf_id)
   validate_trigger_keymap('n', '<Space>', other_buf_id)
 end
