@@ -877,6 +877,19 @@ T['Exchange']['works in Visual mode'] = function()
   validate_edit({ 'ab', 'cd' }, { 1, 1 }, { '<C-v>jgx', 'h', '<C-v>jgx' }, { 'ba', 'dc' }, { 1, 0 })
 end
 
+T['Exchange']['works with newline in region'] = function()
+  validate_edit(
+    { 'a(', '  b', ')', 'c{', '  d,', '}' },
+    { 2, 2 },
+    { 'vk', 'gx', '4jl', 'vk', 'gx' },
+    { 'a(', '  d', ')', 'c{', '  b,', '}' },
+    { 4, 1 }
+  )
+
+  -- Doesn't 100% work with trailing newline due to Neovim limitations
+  -- See https://github.com/neovim/neovim/issues/37664
+end
+
 T['Exchange']['works with different `virtualedit`'] = function()
   local validate = function()
     -- Charwise
@@ -1436,6 +1449,13 @@ T['Multiply']['works with `[count]` in Visual mode'] = function()
   validate_edit(lines, { 2, 1 }, { '<C-v>kh', '2gm' }, ref_lines, ref_cursor)
 end
 
+T['Multiply']['works with newline in region'] = function()
+  validate_edit({ 'a(', '  b', ')' }, { 2, 2 }, { 'vk', 'gm' }, { 'a(', '  b', '  b', ')' }, { 2, 2 })
+
+  -- Doesn't 100% work with trailing newline due to Neovim limitations
+  -- See https://github.com/neovim/neovim/issues/37664
+end
+
 T['Multiply']['works with different `virtualedit`'] = function()
   local validate = function()
     -- Charwise
@@ -1852,6 +1872,13 @@ T['Replace']['works in Visual mode'] = function()
   validate_edit({ 'a b', 'a b' }, { 1, 0 }, { 'yiw', 'w', '<C-v>j', 'gr' }, { 'a a', 'a ' }, { 1, 2 })
   validate_edit({ 'a b', 'a b' }, { 1, 0 }, { 'yy', 'w', '<C-v>j', 'gr' }, { 'a a b', 'a ' }, { 1, 2 })
   validate_edit({ 'a b', 'a b' }, { 1, 0 }, { 'y<C-v>j', 'w', '<C-v>j', 'gr' }, { 'a a', 'a a' }, { 1, 2 })
+end
+
+T['Replace']['works with newline in region'] = function()
+  validate_edit({ 'a(', '  b', ')' }, { 2, 2 }, { 'vky', 'gvgr' }, { 'a(', '  b', ')' }, { 1, 1 })
+
+  -- Doesn't 100% work with trailing newline due to Neovim limitations
+  -- See https://github.com/neovim/neovim/issues/37664
 end
 
 T['Replace']['works with different `virtualedit`'] = function()
