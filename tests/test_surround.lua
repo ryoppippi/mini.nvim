@@ -203,7 +203,7 @@ T['setup()']['properly handles `config.mappings`'] = function()
 
   -- Should precisely set 's' keymap
   make_clean_state()
-  load_module({ mappings = { add = 'cs', delete = 'sd' } })
+  load_module({ mappings = { add = 'cs', delete = 'sd', find = '', find_left = '' } })
   eq(child.fn.maparg('s', 'n'), '<Nop>')
   eq(child.fn.maparg('s', 'x'), '')
 
@@ -1460,6 +1460,64 @@ T['Find surrounding']['works in extended mappings'] = function()
   type_keys('.')
   eq(get_lines(), { '(aa) [bb) (cc)' })
   eq(get_cursor(), { 1, 5 })
+end
+
+T['Find surrounding']['works in Visual mode'] = function()
+  local validate = function(line, before_column, after_column, keys)
+    set_lines({ line })
+    set_cursor(1, before_column)
+
+    type_keys('v', keys)
+    eq(get_cursor(), { 1, after_column })
+    eq(child.fn.col('v'), before_column + 1)
+    eq(child.fn.mode(), 'v')
+
+    child.ensure_normal_mode()
+  end
+
+  validate('(aa) (bb) (cc)', 1, 3, 'sf(')
+  validate('(aa) (bb) (cc)', 1, 5, 'sfn(')
+  validate('(aa) (bb) (cc)', 1, 10, '2sfn(')
+  validate('(aa) (bb) (cc)', 11, 5, 'sfl(')
+  validate('(aa) (bb) (cc)', 11, 0, '2sfl(')
+
+  validate('(aa) (bb) (cc)', 2, 0, 'sF)')
+  validate('(aa) (bb) (cc)', 2, 8, 'sFn)')
+  validate('(aa) (bb) (cc)', 2, 13, '2sFn)')
+  validate('(aa) (bb) (cc)', 11, 8, 'sFl)')
+  validate('(aa) (bb) (cc)', 11, 3, '2sFl)')
+end
+
+T['Find surrounding']['works in Operator-pending mode'] = function()
+  validate_edit1d('(aa) (bb) (cc)', 1, '() (bb) (cc)', 1, type_keys, 'dsf(')
+  validate_edit1d('(aa) (bb) (cc)', 1, '((bb) (cc)', 1, type_keys, 'dsfn(')
+  validate_edit1d('(aa) (bb) (cc)', 1, '((cc)', 1, type_keys, 'd2sfn(')
+  validate_edit1d('(aa) (bb) (cc)', 11, '(aa) cc)', 5, type_keys, 'dsfl(')
+  validate_edit1d('(aa) (bb) (cc)', 11, 'cc)', 0, type_keys, 'd2sfl(')
+
+  validate_edit1d('(aa) (bb) (cc)', 2, 'a) (bb) (cc)', 0, type_keys, 'dsF)')
+  validate_edit1d('(aa) (bb) (cc)', 2, '(a) (cc)', 2, type_keys, 'dsFn)')
+  validate_edit1d('(aa) (bb) (cc)', 2, '(a)', 2, type_keys, 'd2sFn)')
+  validate_edit1d('(aa) (bb) (cc)', 11, '(aa) (bbcc)', 8, type_keys, 'dsFl(')
+  validate_edit1d('(aa) (bb) (cc)', 11, '(aacc)', 3, type_keys, 'd2sFl(')
+
+  -- Works with dot-repeat
+  local validate_dot = function(before_line, column_1, keys, column_2, after_line)
+    set_lines({ before_line })
+    set_cursor(1, column_1)
+    type_keys('d', keys)
+    set_cursor(1, column_2)
+    type_keys('.')
+    eq(get_lines(), { after_line })
+  end
+
+  validate_dot('(aa) (bb) (cc)', 1, 'sf(', 4, '() () (cc)')
+  validate_dot('(aa) (bb) (cc)', 1, 'sfn(', 2, '(((cc)')
+  validate_dot('(aa) (bb) (cc)', 11, 'sfl(', 5, 'cc)')
+
+  validate_dot('(aa) (bb) (cc)', 2, 'sF(', 5, 'a) b) (cc)')
+  validate_dot('(aa) (bb) (cc)', 2, 'sFn(', 2, '(a)')
+  validate_dot('(aa) (bb) (cc)', 11, 'sFl(', 8, '(aacc)')
 end
 
 T['Find surrounding']['respects `config.n_lines`'] = function()
