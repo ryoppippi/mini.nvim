@@ -774,6 +774,7 @@ T['start()']['respects `delay.async`'] = function()
     child.expect_screenshot({ redraw = false })
   end
 
+  child.lua('MiniPick.config.delay.async = 800 * _G.small_time')
   child.lua_notify([[MiniPick.start({ source = { items = { 'a' } }, delay = { async = 8 * _G.small_time } })]])
   validate(0, { '' })
 
@@ -1139,6 +1140,9 @@ T['default_match()']['does not block query update'] = function()
       table.insert(_G.log, #match_inds)
       return set_picker_match_inds(match_inds)
     end
+
+    -- Should use `async` from the picker, not global
+    MiniPick.config.delay.async = 1000
   ]])
   child.lua_notify('MiniPick.start({ delay = { async = 1 } })')
 
