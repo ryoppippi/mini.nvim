@@ -604,6 +604,14 @@ T['start()']['respects `source.items`'] = function()
   child.lua_notify('MiniPick.start({ source = { items = _G.items_callable_cwd, cwd = _G.cwd } })')
   eq(child.lua_get('_G.cur_cwd'), test_dir_absolute)
   stop()
+
+  -- Problematic items
+  if child.fn.has('nvim-0.10') == 1 then
+    child.lua_notify('_G.res = MiniPick.start({ source = { items = { vim.uv.new_timer() } } })')
+    eq(child.lua_get('vim.tbl_map(type, MiniPick.get_picker_items())'), { 'userdata' })
+    type_keys('<CR>')
+    eq(child.lua_get('type(_G.res)'), 'userdata')
+  end
 end
 
 T['start()']['correctly computes stritems'] = function()
