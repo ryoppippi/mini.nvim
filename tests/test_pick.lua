@@ -754,43 +754,6 @@ T['start()']['respects `source.choose_marked`'] = function()
   eq(is_picker_active(), false)
 end
 
-T['start()']['respects `delay.async`'] = function()
-  helpers.skip_if_slow()
-
-  child.set_size(15, 15)
-  child.lua('_G.small_time = ' .. small_time)
-  child.lua_notify([[
-    _G.buf_id, _G.n = vim.api.nvim_get_current_buf(), 0
-    local timer = vim.loop.new_timer()
-    local f = vim.schedule_wrap(function()
-      _G.n = _G.n + 1
-      vim.fn.appendbufline(_G.buf_id, '$', { 'Line ' .. _G.n })
-    end)
-    timer:start(5 * _G.small_time, 5 * _G.small_time, f)
-  ]])
-  local validate = function(n, lines)
-    eq(child.lua_get('_G.n'), n)
-    eq(child.lua_get('vim.api.nvim_buf_get_lines(_G.buf_id, 0, -1, false)'), lines)
-    child.expect_screenshot({ redraw = false })
-  end
-
-  child.lua('MiniPick.config.delay.async = 800 * _G.small_time')
-  child.lua_notify([[MiniPick.start({ source = { items = { 'a' } }, delay = { async = 8 * _G.small_time } })]])
-  validate(0, { '' })
-
-  -- Callback should have already been executed, but not redraw
-  sleep(5 * small_time + small_time)
-  validate(1, { '', 'Line 1' })
-
-  -- No new callback should have been executed, but redraw should
-  sleep(3 * small_time)
-  validate(1, { '', 'Line 1' })
-
-  -- Test that redraw is done repeatedly
-  sleep(8 * small_time)
-  validate(3, { '', 'Line 1', 'Line 2', 'Line 3' })
-end
-
 T['start()']['respects `delay.busy`'] = function()
   local validate = function(is_busy)
     local win_id = get_picker_state().windows.main
@@ -1654,6 +1617,7 @@ T['default_preview()']['can be used in outside preview window'] = function()
   child.api.nvim_open_win(buf_id, false, win_config)
   sleep(small_time)
   default_preview(buf_id, item, { line_position = 'center' })
+  child.cmd('redraw')
   child.expect_screenshot()
 end
 
@@ -6332,43 +6296,6 @@ T['Paste']['does not error on non-existing register label'] = function()
   eq(get_picker_query(), {})
   type_keys('a')
   eq(get_picker_query(), { 'a' })
-end
-
-T['Paste']['respects `delay.async` when waiting for register label'] = function()
-  helpers.skip_if_slow()
-
-  child.set_size(15, 15)
-  child.lua('_G.small_time = ' .. small_time)
-  child.lua_notify([[
-    _G.buf_id, _G.n = vim.api.nvim_get_current_buf(), 0
-    local timer = vim.loop.new_timer()
-    local f = vim.schedule_wrap(function()
-      _G.n = _G.n + 1
-      vim.fn.appendbufline(_G.buf_id, '$', { 'Line ' .. _G.n })
-    end)
-    timer:start(5 * _G.small_time, 5 * _G.small_time, f)
-  ]])
-  local validate = function(n, lines)
-    eq(child.lua_get('_G.n'), n)
-    eq(child.lua_get('vim.api.nvim_buf_get_lines(_G.buf_id, 0, -1, false)'), lines)
-    child.expect_screenshot({ redraw = false })
-  end
-
-  child.lua_notify([[MiniPick.start({ source = { items = { 'a' } }, delay = { async = 8 * _G.small_time } })]])
-  validate(0, { '' })
-  type_keys('<C-r>')
-
-  -- Callback should have already been executed, but not redraw
-  sleep(5 * small_time + small_time)
-  validate(1, { '', 'Line 1' })
-
-  -- No new callback should have been executed, but redraw should
-  sleep(3 * small_time)
-  validate(1, { '', 'Line 1' })
-
-  -- Test that redraw is done repeatedly
-  sleep(8 * small_time)
-  validate(3, { '', 'Line 1', 'Line 2', 'Line 3' })
 end
 
 T['Paste']['is not affected by language mappings'] = function()

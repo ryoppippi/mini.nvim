@@ -66,6 +66,12 @@ There are following change types:
 
 - Allow `source.preview` to directly set another buffer into picker's main window. The recommended way is still to adjust the provided `buf_id` buffer, but there is now a workaround if this is not reasonably possible.
 
+### Refine
+
+- Stop forcing redraw every `config.delay.async` milliseconds while the picker is active. It added visible CPU usage and code/test lines for its benefit (mostly to show "background" changes/notifications).
+
+    One side effect of this is that custom preview with asynchronous highlighting (like after `vim.treesitter.start()`) might require an explicit `:redraw` after a small delay (built-in pickers use `config.delay.async`) to ensure that highlighting is visible.
+
 ## mini.surround
 
 ### Expand
