@@ -2844,6 +2844,33 @@ T['Preview']['does not highlight big files'] = function()
   -- system accesses during test
 end
 
+T['Preview']['does not trigger unnecessary events'] = function()
+  if child.fn.has('nvim-0.10') == 0 then MiniTest.skip('Implemented on in Neovim>=0.10 for convenience') end
+
+  child.lua('_G.log = {}')
+  child.cmd('au BufEnter,BufLeave * lua table.insert(_G.log, "unnecessary")')
+
+  open(test_dir_path)
+  child.lua('_G.log = {}')
+
+  type_keys('j')
+  eq(#get_visible_paths(), 2)
+  eq(get_fs_entry().fs_type, 'directory')
+
+  type_keys('G')
+  eq(#get_visible_paths(), 2)
+  eq(get_fs_entry().fs_type, 'file')
+
+  -- Should not trigger buffer-related events when only moving up-down
+  eq(child.lua_get('#_G.log'), 0)
+
+  -- But should still trigger when changing windows/buffers
+  type_keys('gg')
+  go_in()
+  eq(#get_visible_paths(), 3)
+  eq(child.lua_get('#_G.log') > 0, true)
+end
+
 T['Preview']['is not removed when going out'] = function()
   child.lua('MiniFiles.config.windows.width_focus = 15')
   child.lua('MiniFiles.config.windows.width_preview = 15')
