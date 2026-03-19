@@ -466,6 +466,34 @@ T['Jumping with f/t/F/T']['stops jumping when non-jump movement is done'] = func
   eq(get_cursor(), { 1, 1 })
 end
 
+T['Jumping with f/t/F/T']['stops jumping when leaving buffer'] = function()
+  -- Set up windows and buffers
+  local buf_id_other = child.api.nvim_create_buf(true, false)
+  child.api.nvim_set_current_buf(buf_id_other)
+  child.lua('_G.buf_id_other = ' .. buf_id_other)
+
+  child.cmd('vsplit')
+  local buf_id_cur = child.api.nvim_create_buf(true, false)
+  child.api.nvim_set_current_buf(buf_id_cur)
+  set_lines({ '1e2e3e4e' })
+
+  -- Should stop if `BufLeave` is for current buffer
+  set_cursor(1, 0)
+  type_keys('f', 'e')
+  eq(child.lua_get('MiniJump.state.jumping'), true)
+
+  child.api.nvim_set_current_buf(buf_id_other)
+  eq(child.lua_get('MiniJump.state.jumping'), false)
+
+  -- Should not stop if `BufLeave` is for non-current buffer
+  child.api.nvim_set_current_buf(buf_id_cur)
+  type_keys('f', 'e')
+  eq(child.lua_get('MiniJump.state.jumping'), true)
+
+  child.lua('vim.api.nvim_buf_call(_G.buf_id_other, function() vim.cmd("doautocmd BufLeave") end)')
+  eq(child.lua_get('MiniJump.state.jumping'), true)
+end
+
 T['Jumping with f/t/F/T']['works with different mappings'] = function()
   for _, key in ipairs({ 'f', 't', 'F', 'T' }) do
     child.api.nvim_del_keymap('n', key)
