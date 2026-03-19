@@ -865,6 +865,36 @@ T['start()']['allows overriding built-in mappings'] = function()
   eq(get_picker_state().caret, 2)
 end
 
+T['start()']['warns about duplicating mappings'] = function()
+  child.lua_notify([[
+    _G.log = {}
+    vim.notify = function(...) table.insert(_G.log, { ... }) end
+    MiniPick.start({
+      source = { 'a' },
+      -- This is duplicating among themselves (since <C-i> and <Tab> are the
+      -- same for `getcharstr()`) and with `toggle_preview`
+      mappings = { move_down = '<Tab>', toggle_info = '<C-i>' },
+    })
+  ]])
+
+  local validate_notif = function(out)
+    eq(#out, 2)
+
+    expect.match(out[1], '%(mini%.pick%) Duplicating mapping keys: ')
+    local does_match = out[1]:find('move_down') ~= nil
+      or out[1]:find('toggle_info') ~= nil
+      or out[1]:find('toggle_preview') ~= nil
+    eq(does_match, true)
+
+    eq(out[2], child.lua_get('vim.log.levels.WARN'))
+  end
+
+  local log = child.lua_get('_G.log')
+  eq(#log, 2)
+  validate_notif(log[1])
+  validate_notif(log[2])
+end
+
 T['start()']['works with language mappings'] = function()
   if child.fn.has('nvim-0.10') == 0 then
     MiniTest.skip('Helper function that gets language mappings is available only on Neovim>=0.10')
