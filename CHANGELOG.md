@@ -70,7 +70,7 @@ There are following change types:
 
 - Stop forcing redraw every `config.delay.async` milliseconds while the picker is active. It added visible CPU usage and code/test lines for its benefit (mostly to show "background" changes/notifications).
 
-    One side effect of this is that custom preview with asynchronous highlighting (like after `vim.treesitter.start()`) might require an explicit `:redraw` after a small delay (built-in pickers use `config.delay.async`) to ensure that highlighting is visible.
+    One side effect of this is that previews with an asynchronous highlighting (like after `vim.treesitter.start()`) might require extra care. There are built-in several (but limited) number of explicit `:redraw` with `config.delay.async` milliseconds apart. If that is not enough, make sure to explicitly redraw when needed.
 
 ## mini.surround
 

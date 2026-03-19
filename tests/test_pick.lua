@@ -5549,6 +5549,28 @@ T['Preview']['handles `source.preview` setting buffer directly'] = function()
   eq(child.api.nvim_win_get_buf(state.windows.main), buf_id_other)
 end
 
+T['Preview']['does explicit redraw several times'] = function()
+  child.lua('_G.small_time = ' .. small_time)
+  child.lua_notify([[
+    local ns_id = vim.api.nvim_create_namespace('preview')
+    local preview = function(buf_id, item)
+      vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, { 'A highlight' })
+      vim.defer_fn(function()
+        vim.api.nvim_buf_set_extmark(buf_id, ns_id, 0, 0, { end_row = 0, end_col = 11, hl_group = 'String' })
+      end, 10 * _G.small_time)
+    end
+    MiniPick.start({
+      source = { items = { 'a' }, name = 'Preview redraw', preview = preview },
+      delay = { async = _G.small_time },
+    })
+  ]])
+
+  type_keys('<Tab>')
+  child.expect_screenshot()
+  sleep(10 * small_time + small_time)
+  child.expect_screenshot({ redraw = false })
+end
+
 T['Preview']["respects global value of 'list' and 'listchars' option"] = function()
   child.lua([[
     MiniPick.config.source.preview = function(buf_id, item)
