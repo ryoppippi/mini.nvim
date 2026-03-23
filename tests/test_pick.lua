@@ -873,7 +873,12 @@ T['start()']['warns about duplicating mappings'] = function()
       source = { 'a' },
       -- This is duplicating among themselves (since <C-i> and <Tab> are the
       -- same for `getcharstr()`) and with `toggle_preview`
-      mappings = { move_down = '<Tab>', toggle_info = '<C-i>' },
+      -- Alternative movement mappings should not force duplication
+      mappings = {
+        move_down = '<Tab>',
+        toggle_info = '<C-i>',
+        custom_home = { char = '<Home>', func = function() end },
+      },
     })
   ]])
 
@@ -5368,8 +5373,8 @@ end
 T['Info view'] = new_set()
 
 T['Info view']['works'] = function()
-  child.set_size(40, 60)
-  child.lua('MiniPick.config.window.config = { height = 40 }')
+  child.set_size(43, 60)
+  child.lua('MiniPick.config.window.config = { height = 43 }')
 
   start_with_items({ 'a', 'b', 'bb' }, 'My name')
   mock_picker_cwd(test_dir)
@@ -5378,19 +5383,20 @@ T['Info view']['works'] = function()
 end
 
 T['Info view']['respects custom mappings'] = function()
-  child.set_size(23, 60)
+  child.set_size(43, 60)
   child.lua([[MiniPick.config.mappings.custom_action = { char = '<C-d>', func = function() print('Hello') end }]])
   child.lua([[MiniPick.config.mappings.another_action = { char = '<C-e>', func = function() print('World') end }]])
   -- Should prefer custom action key over built-in
   child.lua([[MiniPick.config.mappings.dup_key_action = { char = '<Left>', func = function() print('!!!') end }]])
   child.lua([[MiniPick.config.mappings.choose = 'a']])
+  child.lua([[MiniPick.config.mappings.custom_home = { char = '<Home>', func = function() print('Home') end }]])
   -- Should omit the rest of "Choose" as they are disabled
   child.lua([[MiniPick.config.mappings.choose_in_split = '']])
   child.lua([[MiniPick.config.mappings.choose_in_vsplit = '']])
   child.lua([[MiniPick.config.mappings.choose_in_tabpage = '']])
   child.lua([[MiniPick.config.mappings.choose_marked = '']])
 
-  child.lua([[MiniPick.config.window.config = { height = 20 }]])
+  child.lua([[MiniPick.config.window.config = { height = 43 }]])
 
   start_with_items({ 'a', 'b', 'bb' }, 'My name')
   mock_picker_cwd(test_dir)
@@ -6237,7 +6243,7 @@ T['Move']['works'] = function()
   validate_current_ind(1)
 end
 
-T['Move']['works with non-overridable keys'] = function()
+T['Move']['works with alternative keys'] = function()
   start_with_items({ 'a', 'b', 'bb', 'bbb' })
 
   type_keys('<Down>')
