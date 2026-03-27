@@ -938,6 +938,118 @@ T['delete()']['respects `vim.{g,b}.minisessions_disable`'] = new_set({
   end,
 })
 
+T['restart()'] = new_set({
+  hooks = {
+    pre_case = function()
+      if child.fn.has('nvim-0.12') == 0 then
+        MiniTest.skip('`MiniSessions.restart()` requires `:restart` from Neovim>=0.12')
+      end
+    end,
+    post_case = function() pcall(vim.fn.delete, 'track-vim-cmd') end,
+  },
+})
+
+local restart = function(vimrc, restart_cmd)
+  -- Monkey-patch `vim.cmd` inside child process to intercept `:restart` args
+  child.lua([[
+    vim.fn.writefile({}, 'track-vim-cmd')
+    local cmd_orig = vim.cmd
+    vim.cmd = function(command)
+      -- Log into the file to be available even after child is stopped
+      vim.fn.writefile({ command }, 'track-vim-cmd', 'a')
+      cmd_orig(command)
+    end
+  ]])
+
+  -- Restart within the child. This disconnects, so gather the "aftercommand"
+  -- passed to `:restart` to manually execute it after setting up new child.
+  -- It might be improved on later versions of 0.12.
+  child.lua_notify(restart_cmd or 'MiniSessions.restart()')
+  vim.loop.sleep(10 * small_time)
+
+  local cmd_after_restart
+  for _, l in ipairs(vim.fn.readfile('track-vim-cmd')) do
+    cmd_after_restart = cmd_after_restart or l:match('^restart (.*)$')
+  end
+  if cmd_after_restart == nil then error('Could not detect restart "after" command') end
+
+  -- Mock `vim.notify` to test notification
+  local mock_notify_cmd = 'lua _G.notify_log={}; vim.notify=function(...) table.insert(_G.notify_log, {...}) end'
+  local args = { '-u', vimrc or 'scripts/minimal_init.lua', '-c', mock_notify_cmd, '-c', cmd_after_restart }
+  child.restart(args)
+end
+
+local setup_cur_session = function()
+  child.cmd('edit aaa | edit tests/dir-sessions/file')
+  local buf_names_expected = get_buf_names()
+  local lines_expected = child.get_lines()
+  child.set_cursor(2, 2)
+
+  -- Add some changes in this session to check that the actual restart
+  child.type_keys('i', 'abc', '<Esc>', 'u')
+  local big_changedtick = child.b.changedtick
+
+  -- Return validator
+  return function(ref_this_session)
+    compare_buffer_names(get_buf_names(), buf_names_expected)
+    eq(child.get_lines(), lines_expected)
+    eq(child.get_cursor(), { 2, 2 })
+    eq(child.v.this_session, ref_this_session)
+    eq(child.lua_get('_G.notify_log'), { { '(mini.sessions) Restarted' } })
+    eq(child.b.changedtick < big_changedtick, true)
+  end
+end
+
+T['restart()']['works without active session'] = function()
+  local validate = setup_cur_session()
+  restart()
+  validate('')
+
+  -- Should be no side effects from creating a temporary session file
+  for _, f in ipairs(child.fn.readdir(child.fn.getcwd())) do
+    if f:find('^restart_session_') ~= nil then error('There is a leftover temporary session file: ' .. f) end
+  end
+end
+
+T['restart()']["works with active 'mini.sessions' session"] = function()
+  child.fn.mkdir(empty_dir_path)
+  reload_module({ autowrite = false, directory = empty_dir_path })
+
+  local validate = setup_cur_session()
+  child.lua('MiniSessions.write("new_session")')
+  local ref_this_session = child.v.this_session
+
+  restart()
+  validate(ref_this_session)
+end
+
+T['restart()']['works with active regular session'] = function()
+  local validate = setup_cur_session()
+  child.fn.mkdir(empty_dir_path)
+  local session_path = make_path(empty_dir_path, 'new_session')
+  child.cmd('mksession! ' .. session_path)
+  local ref_this_session = child.v.this_session
+
+  restart()
+  validate(ref_this_session)
+end
+
+T['restart()']['works with enabled autoread'] = function()
+  local validate = setup_cur_session()
+  restart('tests/dir-sessions/init-files/autoread.lua')
+  validate('')
+
+  -- Should not autoread the session from 'mini.sessions'
+  eq(child.lua_get('_G.session_file'), vim.NIL)
+end
+
+T['restart()']['works without loading the module'] = function()
+  child.setup()
+  local validate = setup_cur_session()
+  restart(nil, 'require("mini.sessions").restart()')
+  validate('')
+end
+
 T['select()'] = new_set({
   hooks = {
     pre_case = function()
