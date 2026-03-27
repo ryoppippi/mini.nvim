@@ -199,13 +199,14 @@ T['setup()']['creates side effects'] = function()
   child.cmd('hi DiagnosticUnderlineWarn guisp=#ffff00 gui=undercurl cterm=undercurl')
   child.cmd('hi DiagnosticUnderlineInfo guisp=#0000ff gui=underdotted cterm=underline')
   child.cmd('hi DiagnosticUnderlineHint guisp=#00ffff gui=underdashed cterm=underdashed')
-  child.cmd('hi DiagnosticUnderlineOk guifg=#00ff00 guibg=#000000')
+  child.cmd('hi DiagnosticUnderlineOk guifg=#00ff00 guibg=#000000 guisp=NONE')
   load_module()
   local has_highlight = function(group, value) expect.match(child.cmd_capture('hi ' .. group), value) end
 
   has_highlight('MiniSnippetsCurrent', 'gui=underdouble guisp=#ffff00')
   has_highlight('MiniSnippetsCurrentReplace', 'gui=underdouble guisp=#ff0000')
   has_highlight('MiniSnippetsFinal', 'gui=underdouble')
+  eq(child.cmd_capture('hi MiniSnippetsFinal'):find('guisp'), nil)
   has_highlight('MiniSnippetsUnvisited', 'gui=underdouble guisp=#00ffff')
   has_highlight('MiniSnippetsVisited', 'gui=underdouble guisp=#0000ff')
 end
