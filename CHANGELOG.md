@@ -74,6 +74,12 @@ There are following change types:
 
     One side effect of this is that previews with an asynchronous highlighting (like after `vim.treesitter.start()`) might require extra care. There are built-in several (but limited) number of explicit `:redraw` with `config.delay.async` milliseconds apart. If that is not enough, make sure to explicitly redraw when needed.
 
+## mini.sessions
+
+### Expand
+
+- Add `restart()` function that restarts Neovim>=0.12 while preserving current session.
+
 ## mini.surround
 
 ### Expand
