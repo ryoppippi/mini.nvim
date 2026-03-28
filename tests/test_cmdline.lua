@@ -927,7 +927,7 @@ T['Autocorrect']['respects abbreviations'] = function()
   eq(child.lua_get('_G.log'), {})
 end
 
-T['Autocorrect']['ignores editing previous text'] = function()
+T['Autocorrect']['ignores editing previous word'] = function()
   type_keys(':', 'set ', '<Left>')
   type_keys('<BS>')
   validate_cmdline('se ', 3)
@@ -936,11 +936,19 @@ T['Autocorrect']['ignores editing previous text'] = function()
   type_keys(' ')
   validate_cmdline('seT  ', 5)
   type_keys('<Esc>')
+end
 
-  -- Appending after editing
-  MiniTest.skip('Make it work or declare out of scope. Problematic because complpat and pos_prev are not relevant')
-  type_keys(':', 'rot', '<Home>', 's', '<End>', ' ')
-  validate_cmdline('sort ')
+T['Autocorrect']['respects editing current word'] = function()
+  if child.fn.has('nvim-0.11') == 0 then MiniTest.skip('Requires `CursorMovedC` event from Neovim>=0.11') end
+
+  type_keys(':', 'te', '<Home>')
+  validate_cmdline('te', 1)
+  type_keys('s')
+  validate_cmdline('ste', 2)
+  type_keys('<End>')
+  validate_cmdline('ste', 4)
+  type_keys(' ')
+  validate_cmdline('set ', 5)
 end
 
 T['Autocorrect']['ignores navigating through history'] = function()
