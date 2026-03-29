@@ -993,6 +993,7 @@ local setup_cur_session = function()
   local buf_names_expected = get_buf_names()
   local lines_expected = child.get_lines()
   child.set_cursor(2, 2)
+  child.o.termguicolors = true
 
   -- Add some changes in this session to check that the actual restart
   child.type_keys('i', 'abc', '<Esc>', 'u')
@@ -1006,6 +1007,7 @@ local setup_cur_session = function()
     eq(child.v.this_session, ref_this_session)
     eq(child.lua_get('_G.notify_log'), { { '(mini.sessions) Restarted' } })
     eq(child.b.changedtick < big_changedtick, true)
+    eq(child.o.termguicolors, true)
   end
 end
 
