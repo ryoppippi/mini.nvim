@@ -764,7 +764,7 @@ T['Jumping with f/t/F/T']['stops jumping if no target is found'] = function()
   -- General idea: there was a bug which didn't reset jumping state if target
   -- was not found by `vim.fn.search()`. In that case, next typing of jumping
   -- key wouldn't make effect, but it should.
-  -- Related test case: 'Enters jumping mode even if first jump is impossible'
+  -- Related test case: 'enters jumping mode even if first jump is impossible'
   for _, key in ipairs({ 'f', 't', 'F', 'T' }) do
     local start_col = key == key:lower() and 0 or 3
     set_cursor(1, start_col)
@@ -773,6 +773,28 @@ T['Jumping with f/t/F/T']['stops jumping if no target is found'] = function()
     -- Ensure no jumping mode
     child.lua('MiniJump.stop_jumping()')
   end
+end
+
+T['Jumping with f/t/F/T']['stops jumping on next non-jump movement if no target is found'] = function()
+  local validate = function(key)
+    set_lines({ 'doooe' })
+    set_cursor(1, 2)
+
+    -- Choose a target that is not reachable in the direction
+    local target = key == key:lower() and 'd' or 'e'
+    type_keys(key, target)
+    eq(get_cursor(), { 1, 2 })
+    eq(get_state().jumping, true)
+
+    type_keys('l')
+    expect.no_equality(get_cursor(), { 1, 2 })
+    eq(get_state().jumping, false)
+  end
+
+  validate('f')
+  validate('t')
+  validate('F')
+  validate('T')
 end
 
 T['Jumping with f/t/F/T']['jumps as far as it can with big `count`'] = function()
