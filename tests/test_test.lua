@@ -1681,6 +1681,19 @@ T['gen_reporter']['buffer'] = new_set({
   },
 }, {
   test = function(opts_element)
+    local expect_screenshot = function()
+      -- Unify path separator for more robust testing. Rely on search and replace
+      -- to preserve extmark highlighting.
+      if package.config:sub(1, 1) == '\\' then
+        local cur_pos = child.api.nvim_win_get_cursor(0)
+        child.cmd([[silent! %s^\S\zs\\^/^g]])
+        child.cmd('silent! nohlsearch')
+        set_cursor(unpack(cur_pos))
+      end
+
+      child.expect_screenshot()
+    end
+
     -- Should respect non-empty 'winborder' while preferring explicitly
     -- configured value over it
     if vim.startswith(opts_element, 'window') then
@@ -1696,16 +1709,7 @@ T['gen_reporter']['buffer'] = new_set({
     local execute_command = string.format([[MiniTest.run_file('%s', { execute = { reporter = _G.reporter } })]], path)
     child.lua(execute_command)
 
-    -- Unify path separator for more robust testing. Rely on search and replace
-    -- to preserve extmark highlighting.
-    if package.config:sub(1, 1) == '\\' then
-      local cur_pos = child.api.nvim_win_get_cursor(0)
-      child.cmd([[silent! %s^\S\zs\\^/^g]])
-      child.cmd('silent! nohlsearch')
-      set_cursor(unpack(cur_pos))
-    end
-
-    child.expect_screenshot()
+    expect_screenshot()
 
     -- Should be able to run several times
     expect.no_error(function() child.lua(execute_command) end)
@@ -1723,7 +1727,7 @@ T['gen_reporter']['buffer'] = new_set({
 
     child.o.winborder = '+,-,+,|,+,-,+,|'
     child.lua(execute_command)
-    child.expect_screenshot()
+    expect_screenshot()
   end,
 })
 
