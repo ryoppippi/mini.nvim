@@ -182,7 +182,7 @@ T['state']['updates `mode`'] = function()
   child.ensure_normal_mode()
 
   type_keys('d', 't', 'e')
-  eq(get_state().mode, 'nov')
+  eq(get_state().mode, 'no')
 
   -- Ensure dot-repeat does not update mode after the jump
   type_keys('V', 't', 'e')
@@ -558,21 +558,21 @@ T['Jumping with f/t/F/T']['enters jumping mode even if first jump is impossible'
 end
 
 T['Jumping with f/t/F/T']['does nothing if there is no place to jump'] = function()
-  local validate_single = function(keys, start_line, start_col, ref_mode)
-    set_lines({ start_line })
-    set_cursor(1, start_col)
+  local validate_single = function(keys, lines, start_pos, ref_mode)
+    set_lines(lines)
+    set_cursor(unpack(start_pos))
 
     type_keys(keys, 'd')
 
     -- It shouldn't move anywhere and should not modify text
-    eq(get_cursor(), { 1, start_col })
-    eq(get_lines(), { start_line })
+    eq(get_lines(), lines)
+    eq(get_cursor(), start_pos)
     eq(child.fn.mode(), ref_mode)
 
     -- The above applies to subsequent dot-repeats as well
     type_keys('.')
-    eq(get_cursor(), { 1, start_col })
-    eq(get_lines(), { start_line })
+    eq(get_lines(), lines)
+    eq(get_cursor(), start_pos)
     eq(child.fn.mode(), ref_mode)
 
     -- Ensure there is no jumping
@@ -580,28 +580,31 @@ T['Jumping with f/t/F/T']['does nothing if there is no place to jump'] = functio
     child.ensure_normal_mode()
   end
 
-  local validate = function(line)
-    validate_single('f', line, 4, 'n')
-    validate_single('t', line, 4, 'n')
-    validate_single('F', line, 2, 'n')
-    validate_single('T', line, 2, 'n')
+  local validate = function(lines, pos_forward, pos_backward)
+    validate_single('f', lines, pos_forward, 'n')
+    validate_single('t', lines, pos_forward, 'n')
+    validate_single('F', lines, pos_backward, 'n')
+    validate_single('T', lines, pos_backward, 'n')
 
-    validate_single('vf', line, 4, 'v')
-    validate_single('vt', line, 4, 'v')
-    validate_single('vF', line, 2, 'v')
-    validate_single('vT', line, 2, 'v')
+    validate_single('vf', lines, pos_forward, 'v')
+    validate_single('vt', lines, pos_forward, 'v')
+    validate_single('vF', lines, pos_backward, 'v')
+    validate_single('vT', lines, pos_backward, 'v')
 
-    validate_single('df', line, 4, 'n')
-    validate_single('dt', line, 4, 'n')
-    validate_single('dF', line, 2, 'n')
-    validate_single('dT', line, 2, 'n')
+    validate_single('df', lines, pos_forward, 'n')
+    validate_single('dt', lines, pos_forward, 'n')
+    validate_single('dF', lines, pos_backward, 'n')
+    validate_single('dT', lines, pos_backward, 'n')
   end
 
   -- Target is present but not reachable
-  validate('abcdefg')
+  validate({ 'abcdefg' }, { 1, 4 }, { 1, 2 })
 
   -- Target is not present
-  validate('abcxefg')
+  validate({ 'abcxefg' }, { 1, 4 }, { 1, 2 })
+
+  -- Target is not present and cursor is on empty line
+  validate({ 'abcxefg', '' }, { 2, 0 }, { 2, 0 })
 end
 
 T['Jumping with f/t/F/T']['can be dot-repeated if did not jump at first'] = function()
@@ -1322,7 +1325,7 @@ T['Events']['work in Visual and Operator-pending modes'] = function()
     validate_log_and_clean({ { event = 'MiniJumpGetTarget', state = state } })
 
     type_keys('e')
-    state.mode = mode == 'v' and 'v' or 'nov'
+    state.mode = mode == 'v' and 'v' or 'no'
     state.jumping, state.target = true, 'e'
     validate_log_and_clean({
       { event = 'MiniJumpStart', state = state },
@@ -1425,7 +1428,7 @@ T['Events']['work with dot-repeat'] = function()
   child.lua('_G.log = {}')
 
   type_keys('.')
-  local state = { mode = 'nov', jumping = true, target = 'e', backward = false, till = false, n_times = 1 }
+  local state = { mode = 'no', jumping = true, target = 'e', backward = false, till = false, n_times = 1 }
   validate_log_and_clean({
     { event = 'MiniJumpStart', state = state },
     { event = 'MiniJumpJump', state = state },
