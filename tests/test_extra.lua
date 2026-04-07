@@ -2530,6 +2530,18 @@ T['pickers']['history()']['has custom "edit_command" mapping'] = function()
   pick_history({ scope = '/' })
   type_keys('<C-e>')
   validate('/', 'bbb', false)
+
+  -- Should work with special characters in editeable history
+  type_keys(':', 'echo "<LT>BS>"', '<CR>')
+  pick_history({ scope = ':' })
+  type_keys('<C-e>')
+  validate(':', 'echo "<BS>"', false)
+
+  child.api.nvim_buf_set_lines(0, 0, -1, false, { '<BS>', '<BS>' })
+  type_keys('/', '<LT>BS>', '<CR>')
+  pick_history({ scope = '/' })
+  type_keys('<C-e>')
+  validate('/', '<BS>', false)
 end
 
 T['pickers']['hl_groups()'] = new_set()
