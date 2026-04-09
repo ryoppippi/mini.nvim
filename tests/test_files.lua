@@ -1006,6 +1006,113 @@ T['open()']['tracks lost focus'] = function()
   eq(is_explorer_active(), true)
 end
 
+T['open()']['does not track lost focus during `vim.ui.select()`'] = function()
+  child.lua([[
+    require('mini.pick').setup()
+
+    _G.log = {}
+    vim.ui.select = function(items, opts, on_choice)
+      -- Check that exactly this `vim.ui.select` function is called
+      table.insert(_G.log, 'vim.ui.select is called')
+      return MiniPick.ui_select(items, opts, on_choice)
+    end
+  ]])
+
+  local ui_select = function()
+    child.lua_notify('vim.ui.select({ "a", "b" }, {}, function(item) table.insert(_G.log, vim.inspect(item)) end)')
+  end
+
+  open(test_dir_path)
+  ui_select()
+  sleep(track_lost_focus_delay + small_time)
+  child.expect_screenshot()
+  eq(child.lua_get('_G.log'), { 'vim.ui.select is called' })
+
+  type_keys('<CR>')
+  child.expect_screenshot()
+  eq(child.lua_get('_G.log'), { 'vim.ui.select is called', '"a"' })
+
+  -- Should be possible to do several times
+  open(test_dir_path)
+  ui_select()
+  sleep(track_lost_focus_delay + small_time)
+  eq(is_explorer_active(), true)
+
+  type_keys('<Esc>')
+  eq(is_explorer_active(), true)
+
+  -- Should have no side effects after closing
+  close()
+  child.lua('_G.log = {}')
+  ui_select()
+  eq(child.lua_get('MiniPick.is_picker_active()'), true)
+  type_keys('<CR>')
+  eq(child.lua_get('_G.log'), { 'vim.ui.select is called', '"a"' })
+end
+
+T['open()']['does not track lost focus during `vim.ui.input()`'] = function()
+  child.lua([[
+    -- Custom implementation of `vim.ui.input()`.
+    -- TODO: Replace with 'mini.input' after it is a thing
+    _G.log = {}
+    vim.ui.input = function(opts, on_confirm)
+      -- Check that exactly this `vim.ui.input` function is called
+      table.insert(_G.log, 'vim.ui.input is called')
+
+      local buf_id = vim.api.nvim_create_buf(false, true)
+      local win_opts = { relative = 'editor', row = vim.o.lines - 2, col = 0, height = 1, width = 10 }
+      win_opts.title = opts.prompt or ' Prompt '
+      win_opts.border = 'single'
+      local win_id = vim.api.nvim_open_win(buf_id, true, win_opts)
+
+      -- Confirm and cancel
+      local close = function(input)
+        vim.api.nvim_win_close(win_id, true)
+        vim.api.nvim_buf_delete(buf_id, { force = true })
+        if vim.fn.mode() == 'i' then vim.cmd('stopinsert') end
+        on_confirm(input)
+      end
+
+      vim.keymap.set('i', '<CR>', function() close(vim.fn.getline('.')) end, { buffer = buf_id })
+      vim.keymap.set('i', '<Esc>', function() close() end, { buffer = buf_id })
+
+      -- Start Insert mode
+      vim.cmd('startinsert')
+    end
+  ]])
+
+  local ui_input = function()
+    child.lua_notify('vim.ui.input({ prompt = "Hello?" }, function(inp) table.insert(_G.log, vim.inspect(inp)) end)')
+  end
+
+  open(test_dir_path)
+  ui_input()
+  sleep(track_lost_focus_delay + small_time)
+  child.expect_screenshot()
+  eq(child.lua_get('_G.log'), { 'vim.ui.input is called' })
+
+  type_keys('World!', '<CR>')
+  child.expect_screenshot()
+  eq(child.lua_get('_G.log'), { 'vim.ui.input is called', '"World!"' })
+
+  -- Should be possible to do several times
+  open(test_dir_path)
+  ui_input()
+  sleep(track_lost_focus_delay + small_time)
+  eq(is_explorer_active(), true)
+
+  type_keys('<Esc>')
+  eq(is_explorer_active(), true)
+
+  -- Should have no side effects after closing
+  close()
+  child.lua('_G.log = {}')
+  ui_input()
+  eq(child.fn.mode(), 'i')
+  type_keys('<CR>')
+  eq(child.lua_get('_G.log'), { 'vim.ui.input is called', '""' })
+end
+
 T['open()']['can display entries with newline character'] = function()
   if helpers.is_windows() then MiniTest.skip('Newline characters in names are not supported on Windows') end
   local temp_dir = make_temp_dir('temp', { 'di\nr/', 'fi\nl\ne' })

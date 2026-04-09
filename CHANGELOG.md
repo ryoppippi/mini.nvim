@@ -33,6 +33,12 @@ There are following change types:
 
 - Add `pickers.manpages` picker.
 
+## mini.files
+
+### Evolve
+
+- Do not treat focus as lost if it has changed from the explorer during `vim.ui.select()` or `vim.ui.input()`. These functions are useful during text editing inside the explorer and are often reimplemented via a separate floating window and dedicated buffer (like in 'mini.pick').
+
 ## mini.hues
 
 ### Expand
