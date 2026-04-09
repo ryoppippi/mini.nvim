@@ -2557,6 +2557,12 @@ T['ui_select()']['calls `on_choice(nil)` in case of abort'] = function()
   ui_select({ -1, -2 })
   type_keys('<C-c>')
   eq(child.lua_get('_G.args'), {})
+
+  -- Selecting no item is the same as abort
+  child.lua('_G.args = nil')
+  ui_select({ 'a', 'b' })
+  type_keys('x', '<CR>')
+  eq(child.lua_get('_G.args'), {})
 end
 
 T['ui_select()']['preserves target window after `on_choice`'] = function()
