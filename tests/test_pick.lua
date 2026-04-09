@@ -2597,6 +2597,26 @@ T['ui_select()']['calls `on_choice` with the exact item'] = function()
   eq(child.lua_get('_G.are_same'), true)
 end
 
+T['ui_select()']['works with currently active picker'] = function()
+  child.lua('_G.log = {}')
+  local on_choice_str = 'function(...) table.insert(_G.log, { ... }) end'
+
+  ui_select({ -1, -2 }, { prompt = 'One' }, on_choice_str)
+  ui_select({ -3, -4 }, { prompt = 'Two' }, on_choice_str)
+  ui_select({ -5, -6 }, { prompt = 'Three' }, on_choice_str)
+
+  child.expect_screenshot()
+  type_keys('<CR>')
+  child.expect_screenshot()
+  type_keys('<C-c>')
+  child.expect_screenshot()
+  type_keys('<C-n>', '<CR>')
+
+  sleep(small_time)
+  eq(is_picker_active(), false)
+  eq(child.lua_get('_G.log'), { { -1, 1 }, {}, { -6, 2 } })
+end
+
 T['ui_select()']['respects `opts.prompt` and `opts.kind`'] = function()
   local validate = function(opts, source_name)
     ui_select({ -1, -2 }, opts)

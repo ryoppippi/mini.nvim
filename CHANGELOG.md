@@ -80,6 +80,8 @@ There are following change types:
 
 - Describe alternative move keys (`<Down>`, `<Up>`, `<Home>`) as "hard-coded but overridable" (instead of a previous not very precise "non-overridable") and show them in the info view.
 
+- Update `ui_select` to wait until currently active picker is stopped before opening a new one. This behavior allows to call several `vim.ui.select()` in a row and is more aligned with how it is assumed to work.
+
 ### Refine
 
 - Stop forcing redraw every `config.delay.async` milliseconds while the picker is active. It added visible CPU usage and code/test lines for its benefit (mostly to show "background" changes/notifications).
