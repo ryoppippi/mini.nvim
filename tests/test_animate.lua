@@ -2227,6 +2227,28 @@ T['Resize']['works with `winheight`/`winwidth`'] = function()
   end
 end
 
+T['Resize']["works when height is changed by adjusting 'cmdheight'"] = function()
+  if child.fn.has('nvim-0.11') == 0 then MiniTest.skip("Neovim>=0.11 preserves 'cmdheight' after `:resize <big>`") end
+  child.cmd('wincmd j | wincmd q')
+
+  local validate = function(cmdheight)
+    child.o.cmdheight = cmdheight
+    sleep(5 * step_time + small_time)
+
+    eq(child.o.cmdheight, cmdheight)
+    child.cmd('resize -2')
+    sleep(3 * step_time + small_time)
+    eq(child.o.cmdheight, cmdheight + 2)
+
+    child.cmd('resize +100')
+    sleep(5 * step_time + small_time)
+    eq(child.o.cmdheight, cmdheight)
+  end
+
+  validate(2)
+  validate(0)
+end
+
 T['Resize']['respects `enable` config setting'] = function()
   child.lua('MiniAnimate.config.resize.enable = false')
   type_keys('<C-w>|')
