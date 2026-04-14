@@ -653,16 +653,28 @@ T['get()']['can be used without `setup()`'] = function()
   eq(child.lua_get('{ require("mini.icons").get("default", "file") }'), { '󰈔', 'MiniIconsGrey', false })
 end
 
-T['get()']['can be used after deleting all buffers'] = function()
+T['get()']['handles deleting all buffers'] = function()
   -- As `vim.filetype.match()` requries a buffer to be more useful, make sure
-  -- that this cached buffer is persistent
+  -- that there is a persistent helper buffer
+  local validate = function()
+    local helper_buf_id, ref_pattern = nil, '^miniicons://%d+/filetype%-match%-scratch$'
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) ~= nil then helper_buf_id = buf_id end
+    end
+    eq(type(helper_buf_id), 'number')
+    eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+  end
+
   eq(get('file', 'hello.xpm'), { '󰍹', 'MiniIconsYellow', false })
-  -- The helper scratch buffer should be properly named
-  eq(child.api.nvim_buf_get_name(2), 'miniicons://2/filetype-match-scratch')
+  validate()
 
   child.cmd('%bwipeout')
   eq(get('file', 'hello.tcsh'), { '', 'MiniIconsAzure', false })
-  eq(child.api.nvim_buf_get_name(3), 'miniicons://3/filetype-match-scratch')
+  validate()
+
+  child.cmd('%bdelete')
+  eq(get('file', 'hello.zsh'), { '', 'MiniIconsGreen', false })
+  validate()
 end
 
 T['get()']['uses width one glyphs'] = function()

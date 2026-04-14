@@ -1790,6 +1790,31 @@ T['Showing keys']['does not trigger unnecessary events'] = function()
   eq(child.lua_get('_G.n_events'), vim.NIL)
 end
 
+T['Showing keys']['handles deleting all buffers'] = function()
+  make_test_map('n', '<Space>aa')
+  load_module({ triggers = { { mode = 'n', keys = '<Space>' } }, window = { delay = 0 } })
+
+  local validate = function()
+    type_keys(' ')
+    type_keys('<Esc>')
+
+    -- Special helper buffer should be always present and work as expected
+    local helper_buf_id, ref_pattern = nil, '^miniclue://%d+/content$'
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) ~= nil then helper_buf_id = buf_id end
+    end
+    eq(type(helper_buf_id), 'number')
+    eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+  end
+
+  validate()
+
+  child.cmd('%bwipeout')
+  validate()
+  child.cmd('%bdelete')
+  validate()
+end
+
 T['Showing keys']['respects `vim.b.miniclue_config`'] = function()
   make_test_map('n', '<Space>a')
   load_module({ triggers = { { mode = 'n', keys = '<Space>' } }, window = { delay = 0 } })

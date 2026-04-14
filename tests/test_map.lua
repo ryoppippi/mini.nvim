@@ -1421,6 +1421,35 @@ T['Window']['ensures target window is valid'] = function()
   eq(child.api.nvim_get_current_win(), init_win_id)
 end
 
+T['Window']['handles deleting all buffers'] = function()
+  mock_test_integration()
+
+  local validate = function()
+    child.api.nvim_set_current_buf(child.api.nvim_create_buf(true, false))
+    set_lines({ 'aa', 'a', ' a', '' })
+    child.bo.modified = false
+
+    map_open()
+
+    local helper_buf_id, ref_pattern = nil, 'minimap://%d+/content'
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) ~= nil then helper_buf_id = buf_id end
+    end
+    eq(type(helper_buf_id), 'number')
+    eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+
+    map_close()
+  end
+
+  validate()
+
+  child.cmd('%bwipeout')
+  validate()
+
+  child.cmd('%bdelete')
+  validate()
+end
+
 T['Window']["does not respect 'winborder' option"] = function()
   if child.fn.has('nvim-0.11') == 0 then MiniTest.skip("'winborder' option is present on Neovim>=0.11") end
   child.set_size(15, 20)

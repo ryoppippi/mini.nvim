@@ -128,6 +128,17 @@ local validate_single_floating_win = function(opts)
   end
 end
 
+local validate_helper_buf = function(name_suffix)
+  -- Special helper buffer should be always present and work as expected
+  local helper_buf_id, ref_pattern = nil, '^minicompletion://%d+/' .. vim.pesc(name_suffix) .. '$'
+  for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+    if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) then helper_buf_id = buf_id end
+  end
+  eq(type(helper_buf_id), 'number')
+  eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+  return helper_buf_id
+end
+
 -- Time constants
 local default_completion_delay, default_info_delay, default_signature_delay = 100, 100, 50
 local small_time = helpers.get_time_const(10)
@@ -1875,6 +1886,32 @@ T['Information window']['handles outdated scheduled showing'] = function()
   eq(child.cmd_capture('messages'), '')
 end
 
+T['Information window']['handles deleting all buffers'] = function()
+  local validate = function()
+    new_buffer()
+    mock_lsp()
+    validate_info_win(default_info_delay)
+    local helper_buf_id = validate_helper_buf('item-info')
+
+    -- Should highlight with attached markdown tree-sitter parser
+    child.lua('_G.helper_buf_id = ' .. helper_buf_id)
+    eq(child.lua_get('vim.treesitter.get_parser(_G.helper_buf_id, "markdown") ~= nil', { helper_buf_id }), true)
+
+    child.ensure_normal_mode()
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      child.api.nvim_set_option_value('modified', false, { buf = buf_id })
+    end
+  end
+
+  validate()
+
+  child.cmd('%bwipeout')
+  validate()
+
+  child.cmd('%bdelete')
+  validate()
+end
+
 T['Information window']['respects `vim.{g,b}.minicompletion_disable`'] = new_set({
   parametrize = { { 'g' }, { 'b' } },
 }, {
@@ -2154,15 +2191,30 @@ T['Signature help']['is closed when forced outside of Insert mode'] = new_set(
   }
 )
 
-T['Signature help']['handles all buffer wipeout'] = function()
-  validate_signature_win(default_signature_delay)
-  child.ensure_normal_mode()
+T['Signature help']['handles deleting all buffers'] = function()
+  local validate = function()
+    new_buffer()
+    child.bo.filetype = 'aaa'
+    mock_lsp()
+    validate_signature_win(default_signature_delay)
+    local helper_buf_id = validate_helper_buf('signature-help')
 
-  child.cmd('%bw!')
-  new_buffer()
-  mock_lsp()
+    -- Should highlight with custom syntax
+    eq(child.api.nvim_get_option_value('syntax', { buf = helper_buf_id }), 'aaa')
 
-  validate_signature_win(default_signature_delay)
+    child.ensure_normal_mode()
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      child.api.nvim_set_option_value('modified', false, { buf = buf_id })
+    end
+  end
+
+  validate()
+
+  child.cmd('%bwipeout')
+  validate()
+
+  child.cmd('%bdelete')
+  validate()
 end
 
 T['Signature help']['respects `vim.{g,b}.minicompletion_disable`'] = new_set({

@@ -2497,6 +2497,32 @@ T['Open']['triggers done event'] = function()
   eq(child.lua_get('_G.inside_done_event'), true)
 end
 
+T['Open']['handles deleting all buffers'] = function()
+  child.bo.modified = false
+  local validate = function()
+    child.cmd('topleft vertical new')
+    sleep(small_time)
+
+    -- Special helper buffer should be always present and work as expected
+    local helper_buf_id, ref_pattern = nil, '^minianimate://%d+/open%-close%-scratch$'
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) ~= nil then helper_buf_id = buf_id end
+    end
+    eq(type(helper_buf_id), 'number')
+    eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+
+    sleep(3 * step_time + small_time)
+  end
+
+  validate()
+
+  child.cmd('%bwipeout')
+  validate()
+
+  child.cmd('%bdelete')
+  validate()
+end
+
 T['Open']['respects `vim.{g,b}.minianimate_disable`'] = new_set({
   parametrize = { { 'g' }, { 'b' } },
 }, {

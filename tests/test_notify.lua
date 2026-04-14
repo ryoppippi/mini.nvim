@@ -1046,6 +1046,30 @@ T['Window']['handles width computation for empty lines inside notification buffe
   child.expect_screenshot()
 end
 
+T['Window']['handles deleting all buffers'] = function()
+  local validate = function(name_suffix)
+    add('Hello')
+
+    local helper_buf_id, ref_pattern = nil, '^mininotify://%d+/' .. vim.pesc(name_suffix) .. '$'
+    for _, buf_id in ipairs(child.api.nvim_list_bufs()) do
+      if string.find(child.api.nvim_buf_get_name(buf_id), ref_pattern) ~= nil then helper_buf_id = buf_id end
+    end
+    eq(type(helper_buf_id), 'number')
+    eq(child.api.nvim_get_option_value('modified', { buf = helper_buf_id }), false)
+  end
+
+  validate('content')
+  validate('textlock-check-scratch')
+
+  child.cmd('%bwipeout')
+  validate('content')
+  validate('textlock-check-scratch')
+
+  child.cmd('%bdelete')
+  validate('content')
+  validate('textlock-check-scratch')
+end
+
 T['LSP progress'] = new_set({
   hooks = {
     pre_case = function()
