@@ -2627,7 +2627,7 @@ local setup_keymaps = function()
 end
 
 T['pickers']['keymaps()']['works'] = function()
-  child.set_size(31, 80)
+  child.set_size(32, 80)
   setup_keymaps()
 
   child.lua_notify('_G.return_item = MiniExtra.pickers.keymaps()')
@@ -2636,7 +2636,7 @@ T['pickers']['keymaps()']['works'] = function()
 
   -- Should have proper preview
   type_keys('<Tab>')
-  if child.fn.has('nvim-0.12') == 1 then child.expect_screenshot() end
+  if child.fn.has('nvim-0.12.2') == 1 then child.expect_screenshot() end
 
   -- Should properly choose by executing LHS keys
   type_keys('<CR>')
@@ -2645,6 +2645,7 @@ T['pickers']['keymaps()']['works'] = function()
   -- Should return chosen value
   local ref_maparg = child.fn.maparg(' b', 'n', false, true)
   ref_maparg.lhs = child.api.nvim_replace_termcodes(ref_maparg.lhs, true, true, true)
+  ref_maparg.buf = child.fn.has('nvim-0.12.2') == 1 and 1 or nil
   eq(child.lua_get('_G.return_item'), {
     desc = '<Cmd>lua _G.res = "buf"<CR>',
     lhs = '<Space>b',
