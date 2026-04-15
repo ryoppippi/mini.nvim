@@ -1065,6 +1065,17 @@ T['restart()']['works without loading the module'] = function()
   validate('')
 end
 
+T['restart()']['works when special characters in session name'] = function()
+  local validate = setup_cur_session()
+  child.fn.mkdir(empty_dir_path)
+  local session_path = make_path(empty_dir_path, 'new %! session')
+  child.cmd('mksession! ' .. vim.fn.fnameescape(session_path))
+  local ref_this_session = child.v.this_session
+
+  restart()
+  validate(ref_this_session)
+end
+
 T['restart()']['handles the error during restart'] = function()
   -- No active session
   child.cmd('edit aaa')
