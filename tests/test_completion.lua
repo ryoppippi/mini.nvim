@@ -1078,6 +1078,21 @@ T['Manual completion']['applies `additionalTextEdits` from "completionItem/resol
   eq(get_lines(), { 'January' })
 end
 
+T['Manual completion']['executes `command` from completion item'] = function()
+  if child.fn.has('nvim-0.11') == 0 then MiniTest.skip('`client:exec_cmd()` is available on Neovim>=0.11') end
+
+  local command = { command = 'add_import', arguments = { 'months' } }
+  mock_lsp_items({ { label = 'Hello', command = command } })
+
+  set_lines({})
+  type_keys('i', '<C-Space>')
+  child.lua('_G.params_log = {}')
+
+  type_keys('<C-n>', '<C-y>')
+  eq(get_lines(), { 'Hello' })
+  eq(child.lua_get('_G.params_log'), { { method = 'workspace/executeCommand', params = command } })
+end
+
 T['Manual completion']['prefers completion range from LSP response'] = function()
   set_lines({})
   type_keys('i', 'months.')

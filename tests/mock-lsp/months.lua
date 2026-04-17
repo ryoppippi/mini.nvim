@@ -67,6 +67,7 @@ Months.client = {
   server_capabilities = {
     completionProvider = { resolveProvider = true, triggerCharacters = { '.' } },
     signatureHelpProvider = { triggerCharacters = { '(', ',' } },
+    executeCommandProvider = { commands = { 'add_import' } },
   },
 }
 
@@ -216,6 +217,10 @@ local requests = {
     -- Construct output
     local signature = { activeParameter = active_param_id, label = label, parameters = parameters }
     return { signatures = { signature } }
+  end,
+
+  ['workspace/executeCommand'] = function(params)
+    table.insert(_G.params_log, { method = 'workspace/executeCommand', params = vim.deepcopy(params) })
   end,
 }
 

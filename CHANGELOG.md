@@ -27,6 +27,12 @@ There are following change types:
 
 - Allow mode arrays for clues and triggers for parity with `modes` parameter of `vim.keymap.set`. By @pkazmier, PR #2202.
 
+## mini.completion
+
+### Expand
+
+- Add support for executing `completionItem.command` in LSP completion.
+
 ## mini.extra
 
 ### Expand
