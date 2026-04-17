@@ -631,7 +631,8 @@ end
 ---   - `'fg'` - highlight foreground with `hex_color`.
 ---   - `'line'` - highlight underline with `hex_color`.
 ---
----@return string Name of created highlight group appropriate to show `hex_color`.
+---@return string|nil Name of created highlight group appropriate to show `hex_color`
+---   or `nil` if highlighted groups was not created.
 MiniHipatterns.compute_hex_color_group = function(hex_color, style)
   style = style or 'bg'
   local hex = hex_color:lower():sub(2)
@@ -642,20 +643,18 @@ MiniHipatterns.compute_hex_color_group = function(hex_color, style)
   if H.hex_color_groups[group_name] then return group_name end
 
   -- Define highlight group if it is not already defined
-  if style == 'bg' then
-    -- Compute opposite color based on Oklab lightness (for better contrast)
-    local opposite = H.compute_opposite_color(hex)
-    vim.api.nvim_set_hl(0, group_name, { fg = opposite, bg = hex_color })
-  end
+  local hl_opts
+  -- - Compute opposite color based on Oklab lightness (for better contrast)
+  if style == 'bg' then hl_opts = { fg = H.compute_opposite_color(hex), bg = hex_color } end
+  if style == 'fg' then hl_opts = { fg = hex_color } end
+  if style == 'line' then hl_opts = { sp = hex_color, underline = true } end
 
-  if style == 'fg' then vim.api.nvim_set_hl(0, group_name, { fg = hex_color }) end
-
-  if style == 'line' then vim.api.nvim_set_hl(0, group_name, { sp = hex_color, underline = true }) end
+  local ok = pcall(vim.api.nvim_set_hl, 0, group_name, hl_opts)
 
   -- Keep track of created groups to properly react on `:hi clear`
-  H.hex_color_groups[group_name] = true
+  H.hex_color_groups[group_name] = ok
 
-  return group_name
+  return ok and group_name or nil
 end
 
 -- Helper data ================================================================

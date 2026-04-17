@@ -1244,4 +1244,11 @@ T['compute_hex_color_group()']['persists after `:colorscheme`'] = function()
   validate_hl_group('MiniHipatterns_000000_line', 'gui=underline guisp=#000000')
 end
 
+T['compute_hex_color_group()']['works if there was an error creating highlight group'] = function()
+  child.lua('vim.api.nvim_set_hl = function() error("An unknown error") end')
+  eq(compute_hex_color_group('#000000', 'bg'), vim.NIL)
+  -- Should not cache as successful creation
+  eq(compute_hex_color_group('#000000', 'bg'), vim.NIL)
+end
+
 return T
