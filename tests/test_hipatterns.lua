@@ -1201,6 +1201,22 @@ T['gen_highlighter']['hex_color()']['respects `opts.filter`'] = function()
   child.expect_screenshot()
 end
 
+T['gen_highlighter']['hex_color()']['respects `opts.max_number`'] = function()
+  set_lines({ '#000000', '#000001', '#ffffff' })
+
+  child.lua([[
+    local hipatterns = require('mini.hipatterns')
+    hipatterns.enable(0, {
+      highlighters = {
+        hex_color = hipatterns.gen_highlighter.hex_color({ max_number = 2 }),
+      },
+    })
+  ]])
+
+  update(0)
+  child.expect_screenshot()
+end
+
 T['compute_hex_color_group()'] = new_set()
 
 local compute_hex_color_group = forward_lua([[require('mini.hipatterns').compute_hex_color_group]])
@@ -1249,6 +1265,40 @@ T['compute_hex_color_group()']['works if there was an error creating highlight g
   eq(compute_hex_color_group('#000000', 'bg'), vim.NIL)
   -- Should not cache as successful creation
   eq(compute_hex_color_group('#000000', 'bg'), vim.NIL)
+end
+
+T['compute_hex_color_group()']['respects `opts.max_number`'] = function()
+  -- Needs `setup()` call to create `ColorScheme` autocommand
+  load_module()
+
+  local validate = function(max_number, hex, ref)
+    eq(compute_hex_color_group(hex, 'bg', { max_number = max_number }), ref)
+  end
+
+  validate(2, '#000000', 'MiniHipatterns_000000_bg')
+  validate(2, '#000001', 'MiniHipatterns_000001_bg')
+  validate(2, '#000002', vim.NIL)
+
+  -- Should persist the check
+  validate(2, '#000002', vim.NIL)
+
+  -- Should be able to increase `max_number`
+  validate(3, '#000002', 'MiniHipatterns_000002_bg')
+
+  -- Should reset on `:colorscheme`
+  child.cmd('colorscheme blue')
+  validate(2, '#000000', 'MiniHipatterns_000000_bg')
+  validate(2, '#000001', 'MiniHipatterns_000001_bg')
+  validate(2, '#000002', vim.NIL)
+
+  -- Should count only actually created highlight groups
+  child.lua([[
+    _G.nvim_set_hl_orig = vim.api.nvim_set_hl
+    vim.api.nvim_set_hl = function() error("An unknown error") end
+  ]])
+  validate(3, '#000002', vim.NIL)
+  child.lua('vim.api.nvim_set_hl = _G.nvim_set_hl_orig')
+  validate(3, '#000002', 'MiniHipatterns_000002_bg')
 end
 
 return T

@@ -45,6 +45,12 @@ There are following change types:
 
 - Do not treat focus as lost if it has changed from the explorer during `vim.ui.select()` or `vim.ui.input()`. These functions are useful during text editing inside the explorer and are often reimplemented via a separate floating window and dedicated buffer (like in 'mini.pick').
 
+## mini.hipatterns
+
+### Evolve
+
+- Add `max_number` option to `gen_highlighter.hex_color()` and `compute_hex_color_group()`. It controls how many different highlight groups these functions are allowed to create. The default is 10000, which is useful to reasonably prevent reaching the maximum number of allowed highlight groups (19999), like when there are too many hex colors to show.
+
 ## mini.hues
 
 ### Expand
