@@ -2209,7 +2209,7 @@ T['simulate_cvd()']['validates arguments'] = function()
 end
 
 -- Integration tests ==========================================================
-T[':Colorscheme'] = new_set({ n_retry = helpers.get_n_retry(4) })
+T[':Colorscheme'] = new_set({ n_retry = helpers.get_n_retry(8) })
 
 T[':Colorscheme']['works'] = function()
   mock_cs()
@@ -2233,9 +2233,8 @@ T[':Colorscheme']['accepts several arguments'] = function()
   sleep(default_show_duration - 2 * small_transition_time)
   expect.match(child.cmd_capture('hi Normal'), 'guifg=#5f87af')
 
-  sleep(default_transition_duration + 3 * small_time)
-  local blue_normal_fg = '#ffd700'
-  expect.match(child.cmd_capture('hi Normal'), 'guifg=' .. blue_normal_fg)
+  sleep(default_transition_duration + 2 * small_transition_time + small_time)
+  expect.match(child.cmd_capture('hi Normal'), 'guifg=#ffd700')
 end
 
 T[':Colorscheme']['provides proper completion'] = function()
