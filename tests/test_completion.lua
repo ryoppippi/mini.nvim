@@ -1371,6 +1371,12 @@ T['Information window']['works'] = function()
   -- Should show relevant content without delay upon revisit
   type_keys('<C-n>')
   child.expect_screenshot()
+
+  -- Should not contain artificially added fields in request parameters
+  local params_log = child.lua_get('_G.params_log')
+  for _, p in ipairs(params_log) do
+    if p.method == 'completionItem/resolve' then eq(p.params.client_id, nil) end
+  end
 end
 
 T['Information window']['works without attached LSP server'] = function()
