@@ -123,6 +123,7 @@ local go_out = forward_lua('MiniFiles.go_out')
 local trim_left = forward_lua('MiniFiles.trim_left')
 local trim_right = forward_lua('MiniFiles.trim_right')
 local get_explorer_state = forward_lua('MiniFiles.get_explorer_state')
+local set_target_window = forward_lua('MiniFiles.set_target_window')
 local set_bookmark = forward_lua('MiniFiles.set_bookmark')
 
 local get_visible_paths = function()
@@ -365,6 +366,30 @@ T['open()']['works per tabpage'] = function()
 
   child.cmd('tabnext')
   child.expect_screenshot()
+end
+
+T['open()']['works after setting target window in another tabpage'] = function()
+  local validate = function(use_latest)
+    local initial_tabpage_id = child.api.nvim_get_current_tabpage()
+    child.cmd('tab split')
+    local tab_win_id = child.api.nvim_get_current_win()
+
+    child.cmd('tabprev')
+    open(test_dir_path)
+    set_target_window(tab_win_id)
+    close()
+    eq(child.api.nvim_get_current_win(), tab_win_id)
+
+    child.cmd('tabprev')
+    open(test_dir_path, use_latest)
+    eq(child.api.nvim_get_current_tabpage(), initial_tabpage_id)
+    eq(#child.api.nvim_tabpage_list_wins(0), 2)
+
+    close()
+  end
+
+  validate(true)
+  validate(false)
 end
 
 T['open()']['handles problematic entry names'] = function()
@@ -1410,6 +1435,22 @@ T['close()']['works per tabpage'] = function()
   child.expect_screenshot()
 end
 
+T['close()']['works after setting target window in another tabpage'] = function()
+  local initial_tabpage_id = child.api.nvim_get_current_tabpage()
+  child.cmd('tab split')
+  local tab_win_id = child.api.nvim_get_current_win()
+
+  child.cmd('tabprev')
+  open(test_dir_path)
+  set_target_window(tab_win_id)
+  close()
+  eq(child.api.nvim_get_current_win(), tab_win_id)
+
+  child.cmd('tabprev')
+  eq(close(), vim.NIL)
+  eq(child.api.nvim_get_current_tabpage(), initial_tabpage_id)
+end
+
 T['close()']['checks for pending file system actions'] = function()
   child.cmd('au User MiniFilesExplorerClose lua _G.had_close_event = true')
   open(test_dir_path)
@@ -2126,8 +2167,6 @@ T['get_explorer_state()']['ensures valid target window'] = function()
 end
 
 T['set_target_window()'] = new_set()
-
-local set_target_window = forward_lua('MiniFiles.set_target_window')
 
 T['set_target_window()']['works'] = function()
   local init_win_id = child.api.nvim_get_current_win()
