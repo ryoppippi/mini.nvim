@@ -1159,10 +1159,10 @@ T['gen_source']['git()']['reacts to file rename'] = function()
   eq(get_buf_data(0).ref_text, 'Hello\nWorld\n')
 end
 
-T['gen_source']['git()']['should try attaching same buffer exactly once'] = function()
+T['gen_source']['git()']['should try autoattaching exactly once'] = function()
   -- If buffer was not attached on `BufEnter` after it tried, then it should
-  -- stop trying. This is an example of when buffer's file is not in Git repo.
-  -- Should disable/enable file because it might have changed Git repo
+  -- stop trying. This is an example of when buffer's file is not in Git repo
+  -- or a normal buffer not for a file.
   child.lua([[
     _G.stdio_queue = {
       { {} }, -- Get path to repo's Git dir
@@ -1174,16 +1174,44 @@ T['gen_source']['git()']['should try attaching same buffer exactly once'] = func
   local init_buf = get_buf()
   eq(is_buf_enabled(0), false)
 
-  -- Simulate `BufEnter`
-  set_buf(new_scratch_buf())
-  set_buf(init_buf)
-  eq(is_buf_enabled(0), false)
-
   -- Spawn should be done only once (on the first try)
   local ref_git_spawn_log = {
     { args = { 'rev-parse', '--path-format=absolute', '--git-dir' }, cwd = test_dir_absolute },
   }
   validate_git_spawn_log(ref_git_spawn_log)
+  child.lua('_G.spawn_log = {}')
+
+  local nofile_buf = child.api.nvim_create_buf(true, false)
+  set_buf(nofile_buf)
+  eq(is_buf_enabled(0), false)
+
+  validate_git_spawn_log({})
+
+  -- Simulate `BufEnter`
+  set_buf(init_buf)
+  eq(is_buf_enabled(0), false)
+  validate_git_spawn_log({})
+
+  set_buf(nofile_buf)
+  eq(is_buf_enabled(0), false)
+  validate_git_spawn_log({})
+end
+
+T['gen_source']['git()']['tries to reattach on `:edit`'] = function()
+  child.lua([[
+    _G.stdio_queue = {
+      { {} },                            -- Get path to repo's Git dir first time
+      { { 'out', _G.git_dir } },         -- Get path to repo's Git dir second time
+      { { 'out', 'Line 1\nLine 2\n' } }, -- Get reference text
+    }
+    _G.process_mock_data = { { exit_code = 1 } }
+  ]])
+
+  edit(test_file_path)
+  eq(is_buf_enabled(0), false)
+
+  child.cmd('edit')
+  eq(is_buf_enabled(0), true)
 end
 
 T['gen_source']['none()'] = new_set()
