@@ -1858,14 +1858,23 @@ T['Scroll']["does not automatically animate result of 'incsearch'"] = function()
   type_keys('/', 'oo', '<CR>')
   child.expect_screenshot()
   sleep(step_time + small_time)
-  -- Should be the same
+  -- - Should be the same
   child.expect_screenshot()
 
   -- Should work for search with `?`
   type_keys('?', 'aa', '<CR>')
   child.expect_screenshot()
   sleep(step_time + small_time)
-  -- Should be the same
+  -- - Should be the same
+  child.expect_screenshot()
+
+  -- Should work for canceled search
+  set_cursor(1, 0)
+  type_keys('/', 'oo')
+  type_keys('<Esc>')
+  child.expect_screenshot()
+  sleep(step_time + small_time)
+  -- - Should be the same
   child.expect_screenshot()
 end
 
