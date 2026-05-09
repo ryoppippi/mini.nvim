@@ -1026,6 +1026,18 @@ T['restart()']['works without active session'] = function()
   validate_no_restart_sideffects()
 end
 
+T['restart()']['ignores global arguments without active session'] = function()
+  child.restart({ '-u', 'scripts/minimal_init.lua', '--', 'file-a1', 'file-a2' })
+  child.cmd('%bwipeout')
+  child.cmd('edit file-b')
+
+  load_module()
+  restart()
+
+  eq(get_buf_names(), { 'file-b' })
+  eq(child.fn.argv(-1), {})
+end
+
 T['restart()']["works with active 'mini.sessions' session"] = function()
   child.fn.mkdir(empty_dir_path)
   reload_module({ autowrite = false, directory = empty_dir_path })
