@@ -2649,15 +2649,34 @@ T['ui_select()']['shows only original item in preview'] = function()
 end
 
 T['ui_select()']['respects `opts.preview_item`'] = function()
-  child.lua_notify([[MiniPick.ui_select(
-    { { var = 'abc' } },
-    {
-      format_item = function(x) return x.var end,
-      preview_item = function(x) return { 'My preview', 'Var = ' .. x.var } end,
-    }
-  )]])
-  type_keys('<Tab>')
-  child.expect_screenshot()
+  local validate = function(keys)
+    child.lua_notify([[MiniPick.ui_select(
+      { { var = 'abc' } },
+      { format_item = function(x) return x.var end, preview_item = _G.preview_item },
+      function() end
+    )]])
+    for _, k in ipairs(keys) do
+      type_keys(k)
+      child.expect_screenshot()
+    end
+    type_keys('<C-c>')
+  end
+
+  -- Line array output
+  child.lua('_G.preview_item = function(x) return { "My preview", "Var = " .. x.var } end')
+  validate({ '<Tab>' })
+
+  -- Preview data output
+  child.lua([[
+    _G.preview_item = function(x)
+      local lines = { "My preview (should be hidden)", "Var = " .. x.var }
+      local buf_id = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, lines)
+      vim.bo[buf_id].bufhidden = 'wipe'
+      return { buf = buf_id, pos = { 2, 0 } }
+    end
+  ]])
+  validate({ '<Tab>', '<C-b>' })
 end
 
 T['ui_select()']['respects `start_opts`'] = function()
