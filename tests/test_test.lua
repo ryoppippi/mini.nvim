@@ -1347,7 +1347,7 @@ T['child']['redirected method tables'] = new_set({
     { 'hl', 'range', { 0, 1, 'Comment', { 0, 1 }, { 0, 2 } } },
     { 'json', 'encode', { { a = 1 } } },
     { 'loop', 'hrtime', {} },
-    { 'lsp', 'get_active_clients', {} },
+    { 'lsp', 'get_clients', {} },
     { 'mpack', 'encode', { { a = 1 } } },
     { 'spell', 'check', { 'thouht' } },
     { 'treesitter', 'get_parser', {} },
