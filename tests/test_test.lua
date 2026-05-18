@@ -51,6 +51,10 @@ local get_current_all_cases = function()
   })
 end
 
+local wait_till_not_executing = function()
+  child.lua('vim.wait(100000, function() return not MiniTest.is_executing() end, 20)')
+end
+
 local testrun_ref_file = function(name)
   local find_files_command = string.format([[_G.find_files = function() return { '%s' } end]], get_ref_path(name))
   child.lua(find_files_command)
@@ -65,6 +69,7 @@ local testrun_ref_file = function(name)
     }
   ]])
   child.lua([[MiniTest.run({ collect = { find_files = _G.find_files }, execute = { reporter = _G.report_in_log } })]])
+  wait_till_not_executing()
   return get_current_all_cases()
 end
 
@@ -83,6 +88,7 @@ end
 
 -- Time constants
 local terminal_wait = helpers.get_time_const(500)
+local wait_time = helpers.get_time_const(100)
 
 -- Output test set
 local T = new_set({
@@ -634,6 +640,27 @@ T['execute()']['handles no cases'] = function()
 
   -- Should throw message
   eq(get_latest_message(), '(mini.test) No cases to execute.')
+end
+
+T['execute()']['handles async-adjacent functions'] = function()
+  child.lua('_G.file_path = ' .. vim.inspect(get_ref_path('testref_asynclike.lua')))
+  child.lua('_G.wait_time = ' .. wait_time)
+  child.lua([[
+    local cases = MiniTest.collect({ find_files = function() return { _G.file_path } end })
+    _G.reporter_log = {}
+    local report_in_log = {
+      start = function() table.insert(_G.reporter_log, 'start') end,
+      update = function() table.insert(_G.reporter_log, 'update: ' .. MiniTest.current.case.exec.state) end,
+      finish = function() table.insert(_G.reporter_log, 'finish') end,
+    }
+    MiniTest.execute(cases, { reporter = report_in_log })
+  ]])
+  vim.loop.sleep(2 * wait_time)
+
+  -- Should execute all steps in order, despite of test case forces other
+  -- scheduled to be executed first
+  eq(child.lua_get('_G.reporter_log'), { 'start', 'update: Executing test', 'update: Fail', 'finish' })
+  eq(child.lua_get('#MiniTest.current.all_cases[1].exec.fails > 0'), true)
 end
 
 T['execute()']['respects `config.silent`'] = function()
@@ -1708,6 +1735,7 @@ T['gen_reporter']['buffer'] = new_set({
 
     local execute_command = string.format([[MiniTest.run_file('%s', { execute = { reporter = _G.reporter } })]], path)
     child.lua(execute_command)
+    wait_till_not_executing()
 
     expect_screenshot()
 
@@ -1727,6 +1755,7 @@ T['gen_reporter']['buffer'] = new_set({
 
     child.o.winborder = '+,-,+,|,+,-,+,|'
     child.lua(execute_command)
+    wait_till_not_executing()
     expect_screenshot()
   end,
 })
